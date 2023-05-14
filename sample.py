@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as f
+import torch.nn.functional as F
 import torchvision
 
 num_epochs = 100
@@ -21,7 +21,7 @@ class NeuralNet(nn.Module):
         x = self.fc1(x)
         x = self.relu(x)
         x = self.fc2(x)
-        return f.log_softmax(x, dim=1)
+        return F.log_softmax(x, dim=1)
 
 
 train_data = torchvision.datasets.FashionMNIST(
