@@ -24,43 +24,44 @@ class NeuralNet(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-train_data = torchvision.datasets.FashionMNIST(
-    './datasets', train=True, download=True,
-    transform=torchvision.transforms.ToTensor()
-)
-train_dataloader = torch.utils.data.DataLoader(
-    train_data, batch_size=100, shuffle=True
-)
+if __name__ == '__main__':
+    train_data = torchvision.datasets.FashionMNIST(
+        './datasets', train=True, download=True,
+        transform=torchvision.transforms.ToTensor()
+    )
+    train_dataloader = torch.utils.data.DataLoader(
+        train_data, batch_size=100, shuffle=True
+    )
 
-# GPU mode
-device = torch.device('mps') \
-    if torch.backends.mps.is_available() else torch.device('cpu')
-model = NeuralNet().to(device)
-model.train()
+    # GPU mode
+    device = torch.device('mps') \
+        if torch.backends.mps.is_available() else torch.device('cpu')
+    model = NeuralNet().to(device)
+    model.train()
 
-# setting loss function
-criterion = nn.CrossEntropyLoss()
-# setting optimize method
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # setting loss function
+    criterion = nn.CrossEntropyLoss()
+    # setting optimize method
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-for epoch in range(num_epochs):
-    loss_sum = 0
+    for epoch in range(num_epochs):
+        loss_sum = 0
 
-    for inputs, labels in train_dataloader:
+        for inputs, labels in train_dataloader:
 
-        inputs = inputs.to(device)
-        labels = labels.to(device)
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        inputs = inputs.view(-1, image_size)
-        outputs = model(inputs)
+            inputs = inputs.view(-1, image_size)
+            outputs = model(inputs)
 
-        loss = criterion(outputs, labels)
-        loss_sum += loss
+            loss = criterion(outputs, labels)
+            loss_sum += loss
 
-        loss.backward()
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
 
-    print(f'Epoch: {epoch+1}/{num_epochs},'
-          f' Loss: {loss_sum / len(train_dataloader)}')
+        print(f'Epoch: {epoch+1}/{num_epochs},'
+              f' Loss: {loss_sum / len(train_dataloader)}')
