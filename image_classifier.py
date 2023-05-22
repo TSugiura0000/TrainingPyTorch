@@ -13,11 +13,19 @@ transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.5,), (0.5,)),
                                 ])
 
-train_set = datasets.MNIST(data_path, download=True, train=True, transform=transform)
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=128, shuffle=True)
+train_set = datasets.MNIST(
+    data_path, download=True, train=True, transform=transform
+)
+train_loader = torch.utils.data.DataLoader(
+    train_set, batch_size=128, shuffle=True
+)
 
-test_set = datasets.MNIST(data_path, download=True, train=False, transform=transform)
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=True)
+test_set = datasets.MNIST(
+    data_path, download=True, train=False, transform=transform
+)
+test_loader = torch.utils.data.DataLoader(
+    test_set, batch_size=128, shuffle=True
+)
 
 model = nn.Sequential(
     nn.Linear(784, 256),
@@ -77,7 +85,8 @@ if __name__ == '__main__':
             test_accuracies.append(correct / total)
 
         if epoch % 1 == 0:
-            print('Epoch: %d, Loss: %f, Test accuracy: %f' % (epoch, float(loss), correct / total))
+            print('Epoch: %d, Loss: %f, Test accuracy: %f'
+                  % (epoch, float(loss), correct / total))
 
     # plot
     train_loss = np.array(train_losses)
