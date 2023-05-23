@@ -104,8 +104,8 @@ if __name__ == '__main__':
         # training
         loss = None
         for images, targets in train_dataloader:
-            images.to(device)
-            targets.to(device)
+            images = images.to(device)
+            targets = targets.to(device)
             batch_size = images.shape[0]
             outputs = model(images)
             loss = loss_fn(outputs, targets)
@@ -123,8 +123,8 @@ if __name__ == '__main__':
 
         with torch.no_grad():
             for images, targets in test_dataloader:
-                images.to(device)
-                targets.to(device)
+                images = images.to(device)
+                targets = targets.to(device)
                 batch_size = images.shape[0]
                 outputs = model(images)
                 t_loss = loss_fn(outputs, targets)
