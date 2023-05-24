@@ -1,10 +1,12 @@
+from datetime import datetime
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader
 from torchvision import transforms, datasets
 
 
@@ -14,9 +16,7 @@ def create_mnist_dataloader():
 
     # load dataset
     transform = transforms.Compose(
-        [transforms.ToTensor(),
-         transforms.Normalize((0.5, ), (0.5, )),
-         ]
+        [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,)), ]
     )
     train_set = datasets.MNIST(
         data_path, download=True, train=True, transform=transform
@@ -26,12 +26,9 @@ def create_mnist_dataloader():
     )
 
     # create dataloader
-    train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=128, shuffle=True
-    )
-    test_loader = torch.utils.data.DataLoader(
-        test_set, batch_size=128, shuffle=True
-    )
+    b_size = 256
+    train_loader = DataLoader(train_set, batch_size=b_size, shuffle=True)
+    test_loader = DataLoader(test_set, batch_size=b_size, shuffle=True)
     return train_loader, test_loader
 
 
@@ -60,6 +57,7 @@ class ConvImageClassifier(nn.Module):
             64,
             n_class
         )
+        self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = F.max_pool2d(F.relu(self.conv1(x)), 2)
@@ -72,6 +70,7 @@ class ConvImageClassifier(nn.Module):
         out = self.linear1(out)
         out = F.relu(out)
         out = self.linear2(out)
+        out = self.softmax(out)
         return out
 
 
@@ -79,30 +78,37 @@ if __name__ == '__main__':
     # setting device
     device = torch.device('cuda') \
         if torch.cuda.is_available() else torch.device('cpu')
+    print('device: ', device)
 
     # load dataloader
+    print('Loading DataLoader . . .')
     train_dataloader, test_dataloader = create_mnist_dataloader()
+    print('Completed Loading DataLoader\n')
 
     # create model and move to 'device'
     model = ConvImageClassifier(1, 28, 10, n_conv_channels=32)
     model.to(device=device)
 
     # loss function
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.NLLLoss()
 
-    learning_rate = 1e-3
+    # learning_rate = 1e-2
+    #
+    # optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters())
 
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-
-    n_epochs = 10000
+    n_epochs = 100
+    step = 1
 
     train_losses = []
     test_losses = []
     test_accuracies = []
 
-    for epoch in range(n_epochs):
+    print('====== Start training and test ======')
+    for epoch in range(1, n_epochs + 1):
         # training
-        loss = None
+        model.train()
+        loss_train = 0.0
         for images, targets in train_dataloader:
             images = images.to(device)
             targets = targets.to(device)
@@ -114,10 +120,14 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        if epoch % 100 == 0:
-            train_losses.append(loss.item())
+            loss_train += loss.item()
+
+        if epoch % step == 0:
+            train_losses.append(loss_train / len(train_dataloader))
 
         # test
+        model.eval()
+        loss_test = 0.0
         correct = 0
         total = 0
 
@@ -129,35 +139,53 @@ if __name__ == '__main__':
                 outputs = model(images)
                 t_loss = loss_fn(outputs, targets)
                 _, predicted = torch.max(outputs, dim=1)
+                loss_test += t_loss.item()
                 total += targets.shape[0]
                 correct += int((predicted == targets).sum())
 
-            if epoch % 100 == 0:
-                test_losses.append(t_loss.item())
+            if epoch % step == 0:
+                test_losses.append(loss_test / len(test_dataloader))
                 test_accuracies.append(correct / total)
 
-        if epoch % 100 == 0:
-            print('Epoch: %d, Loss: %f, Test accuracy: %f'
-                  % (epoch, float(loss), correct / total))
+        if epoch % step == 0 or epoch == 1:
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print(
+                'Log: {}, Epoch: {}, Training loss: {}, Test loss: {},'
+                ' Test accuracy: {}'.format(
+                    current_time, epoch,
+                    float(loss_train / len(train_dataloader)),
+                    float(loss_test / len(test_dataloader)),
+                    correct / total
+                )
+            )
 
     # plot
     train_loss = np.array(train_losses)
     test_loss = np.array(test_losses)
     test_accuracies = np.array(test_accuracies)
+    save_path = './result/mnist_conv_nn_adam.pdf'
 
-    figure, axs = plt.subplots(1, 2)
-    axs[0].plot([i * 100 for i in range(n_epochs // 100)], train_loss, label='Train_loss')
-    axs[0].plot([i * 100 for i in range(n_epochs // 100)], test_loss, label='Test_loss')
+    figure, axs = plt.subplots(1, 2, figsize=(15, 7))
+    axs[0].plot(
+        [i * step for i in range(1, n_epochs // step + 1)],
+        train_loss, label='Train_loss'
+    )
+    axs[0].plot(
+        [i * step for i in range(1, n_epochs // step + 1)],
+        test_loss, label='Test_loss'
+    )
     axs[0].set_title('Losses')
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].legend()
 
-    axs[1].plot(range(n_epochs // 100), test_accuracies, label='Test_accuracies')
+    axs[1].plot(range(n_epochs // step), test_accuracies,
+                label='Test_accuracies')
     axs[1].set_title('Accuracy')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Accuracy')
 
     figure.suptitle('MNIST Dataset Classifier')
 
+    plt.savefig(save_path, format='pdf', bbox_inches='tight')
     plt.show()
