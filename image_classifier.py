@@ -67,6 +67,7 @@ if __name__ == '__main__':
         image_size=28,
         n_class=10
     )
+    model.to(device=device)
 
     # loss function
     loss_fn = nn.NLLLoss()
