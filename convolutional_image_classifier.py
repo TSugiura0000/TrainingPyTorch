@@ -189,5 +189,5 @@ if __name__ == '__main__':
     save_path_as_pdf = './result/mnist_conv_nn_adam.pdf'
     save_path_as_png = './result/mnist_conv_nn_adam.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
-    plt.savefig(save_path_as_png, format='png', bbox_inches='tight')
+    plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     plt.show()
