@@ -163,7 +163,6 @@ if __name__ == '__main__':
     train_loss = np.array(train_losses)
     test_loss = np.array(test_losses)
     test_accuracies = np.array(test_accuracies)
-    save_path = './result/mnist_conv_nn_adam.pdf'
 
     figure, axs = plt.subplots(1, 2, figsize=(15, 7))
     axs[0].plot(
@@ -187,5 +186,8 @@ if __name__ == '__main__':
 
     figure.suptitle('MNIST Dataset Classifier')
 
-    plt.savefig(save_path, format='pdf', bbox_inches='tight')
+    save_path_as_pdf = './result/mnist_conv_nn_adam.pdf'
+    save_path_as_png = './result/mnist_conv_nn_adam.png'
+    plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
+    plt.savefig(save_path_as_png, format='png', bbox_inches='tight')
     plt.show()
