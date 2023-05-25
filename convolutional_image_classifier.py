@@ -92,12 +92,12 @@ if __name__ == '__main__':
     # loss function
     loss_fn = nn.NLLLoss()
 
-    # learning_rate = 1e-2
-    #
-    # optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    optimizer = optim.Adam(model.parameters())
+    learning_rate = 1e-2
 
-    n_epochs = 100
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    # optimizer = optim.Adam(model.parameters())
+
+    n_epochs = 1000
     step = 1
 
     train_losses = []
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     train_loss = np.array(train_losses)
     test_loss = np.array(test_losses)
     test_accuracies = np.array(test_accuracies)
-    save_path = './result/mnist_conv_nn_adam.pdf'
+    save_path = './result/mnist_conv_nn_sgd.pdf'
 
     figure, axs = plt.subplots(1, 2, figsize=(15, 7))
     axs[0].plot(
