@@ -62,7 +62,11 @@ if __name__ == '__main__':
     print('Completed Loading DataLoader\n')
 
     # create model and move to 'device'
-    model = NNImageClassifier()
+    model = NNImageClassifier(
+        n_image_channels=1,
+        image_size=28,
+        n_class=10
+    )
 
     # loss function
     loss_fn = nn.NLLLoss()
