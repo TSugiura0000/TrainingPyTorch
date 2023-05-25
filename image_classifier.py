@@ -116,6 +116,7 @@ if __name__ == '__main__':
                 outputs = model(images.view(batch_size, -1))
                 t_loss = loss_fn(outputs, targets)
                 _, predicted = torch.max(outputs, dim=1)
+                loss_test += t_loss.item()
                 total += targets.shape[0]
                 correct += int((predicted == targets).sum())
 
@@ -126,7 +127,7 @@ if __name__ == '__main__':
         if epoch == 1 or epoch % step == 0:
             current_time = datetime.now().strftime('%Y-%m-%d %H:%H:%S')
             print(
-                'Log: {}, Epoch: {}, Training Loss: {}, Test Loss: {}'
+                'Log: {}, Epoch: {}, Training Loss: {}, Test Loss: {} '
                 'Test accuracy: {}'.format(
                     current_time, epoch,
                     float(loss_train / len(train_dataloader)),

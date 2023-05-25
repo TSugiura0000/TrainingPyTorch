@@ -150,8 +150,8 @@ if __name__ == '__main__':
         if epoch % step == 0 or epoch == 1:
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             print(
-                'Log: {}, Epoch: {}, Training loss: {}, Test loss: {},'
-                ' Test accuracy: {}'.format(
+                'Log: {}, Epoch: {}, Training loss: {}, Test loss: {}, '
+                'Test accuracy: {}'.format(
                     current_time, epoch,
                     float(loss_train / len(train_dataloader)),
                     float(loss_test / len(test_dataloader)),
