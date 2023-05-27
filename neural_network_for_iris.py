@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -11,7 +13,7 @@ def create_iris_dataloader(batch_size=32):
     # load iris dataset from scikit-learn
     iris = load_iris()
     X_train, X_test, y_train, y_test = \
-        train_test_split(iris.data, iris.target, test_size=0.2, random_state=11)
+        train_test_split(iris.data, iris.target, test_size=0.3, random_state=11)
 
     # convert to torch tensor
     X_train = torch.tensor(X_train, dtype=torch.float32)
@@ -62,16 +64,18 @@ if __name__ == '__main__':
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     n_epochs = 1000
+    step = 10
     train_losses = []
     test_losses = []
     test_accuracies = []
 
-    for epoch in range(n_epochs):
+    for epoch in range(1, n_epochs + 1):
         # training
-        loss = None
+        model.train()
+        loss_train = 0.0
         for data, targets in train_dataloader:
-            data.to(device)
-            targets.to(device)
+            data = data.to(device)
+            targets = targets.to(device)
             outputs = model(data)
             loss = loss_fn(outputs, targets)
 
@@ -79,49 +83,64 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        if epoch % 100 == 0:
-            train_losses.append(loss.item())
+            loss_train += loss.item()
+
+        if epoch % step == 0:
+            train_losses.append(loss_train / len(train_dataloader))
 
         # test
+        model.eval()
+        loss_test = 0.0
         correct = 0
         total = 0
 
         with torch.no_grad():
             for data, targets in test_dataloader:
-                data.to(device)
-                targets.to(device)
+                data = data.to(device)
+                targets = targets.to(device)
                 outputs = model(data)
                 t_loss = loss_fn(outputs, targets)
                 _, predicted = torch.max(outputs, dim=1)
+                loss_test += t_loss.item()
                 total += targets.shape[0]
                 correct += int((predicted == targets).sum())
 
-            if epoch % 100 == 0:
+            if epoch % step == 0:
                 test_losses.append(t_loss.item())
                 test_accuracies.append(correct / total)
 
-        if epoch % 100 == 0:
-            print('Epoch: %d, Loss: %f, Test accuracy: %f'
-                  % (epoch, float(loss), correct / total))
+        if epoch == 1 or epoch % step == 0:
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%H:%S')
+            print(
+                'Log: {}, Epoch: {}, Training Loss: {}, Test Loss: {} '
+                'Test accuracy: {}'.format(
+                    current_time, epoch,
+                    float(loss_train / len(train_dataloader)),
+                    float(loss_test / len(test_dataloader)),
+                    correct / total
+                ))
 
     # plot
     train_loss = np.array(train_losses)
     test_loss = np.array(test_losses)
     test_accuracies = np.array(test_accuracies)
 
-    figure, axs = plt.subplots(1, 2)
-    axs[0].plot([i * 100 for i in range(n_epochs // 100)], train_loss, label='Train_loss')
-    axs[0].plot([i * 100 for i in range(n_epochs // 100)], test_loss, label='Test_loss')
+    figure, axs = plt.subplots(1, 2, figsize=(15, 7))
+    axs[0].plot([i * step for i in range(1, n_epochs // step + 1)], train_loss, label='Train_loss')
+    axs[0].plot([i * step for i in range(1, n_epochs // step + 1)], test_loss, label='Test_loss')
     axs[0].set_title('Losses')
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].legend()
 
-    axs[1].plot([i * 100 for i in range(n_epochs // 100)], test_accuracies, label='Test_accuracies')
+    axs[1].plot([i * step for i in range(1, n_epochs // step + 1)], test_accuracies, label='Test_accuracies')
     axs[1].set_title('Accuracy')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Accuracy')
 
     figure.suptitle('Iris Dataset Classifier')
+
+    save_path_as_pdf = f'./result/iris_nn_sgd.pdf'
+    plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
 
     plt.show()

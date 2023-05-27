@@ -92,12 +92,12 @@ if __name__ == '__main__':
     # loss function
     loss_fn = nn.NLLLoss()
 
-    learning_rate = 1e-2
+    # learning_rate = 1e-2
 
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    # optimizer = optim.Adam(model.parameters())
+    # optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters())
 
-    n_epochs = 1000
+    n_epochs = 100
     step = 1
 
     train_losses = []
