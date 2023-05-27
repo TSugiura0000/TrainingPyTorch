@@ -106,7 +106,7 @@ if __name__ == '__main__':
                 correct += int((predicted == targets).sum())
 
             if epoch % step == 0:
-                test_losses.append(t_loss.item())
+                test_losses.append(loss_test / len(test_dataloader))
                 test_accuracies.append(correct / total)
 
         if epoch == 1 or epoch % step == 0:
