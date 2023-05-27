@@ -92,10 +92,10 @@ if __name__ == '__main__':
     # loss function
     loss_fn = nn.NLLLoss()
 
-    # learning_rate = 1e-2
+    learning_rate = 1e-2
 
-    # optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    # optimizer = optim.Adam(model.parameters())
 
     n_epochs = 100
     step = 1
@@ -186,8 +186,8 @@ if __name__ == '__main__':
 
     figure.suptitle('MNIST Dataset Classifier')
 
-    save_path_as_pdf = './result/mnist_conv_nn_adam.pdf'
-    save_path_as_png = './result/mnist_conv_nn_adam.png'
+    save_path_as_pdf = './result/mnist_conv_nn_sgd.pdf'
+    save_path_as_png = './result/mnist_conv_nn_sgd.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     plt.show()
