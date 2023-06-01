@@ -214,10 +214,10 @@ if __name__ == '__main__':
     loss_fn = RMSELoss()
 
     # learning rate
-    # lr = 1e-2
+    lr = 1e-6
 
     # optimizer
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     # training setting
     n_epochs = 100
