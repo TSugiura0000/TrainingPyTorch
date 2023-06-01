@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
 from torch import optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -29,6 +30,29 @@ def create_mnist_dataloader(n_batch: int = 256):
     train_loader = DataLoader(train_set, batch_size=n_batch, shuffle=True)
     test_loader = DataLoader(test_set, batch_size=n_batch, shuffle=True)
     return train_loader, test_loader
+
+
+def plot_comparison(images, reconstructed_images, epoch, n=10):
+    images = images.cpu().numpy()
+    reconstructed_images = reconstructed_images.cpu().detach().numpy()
+
+    fig = plt.figure(figsize=(20, 4))
+    gs = gridspec.GridSpec(2, n)
+    gs.update(wspace=0.05, hspace=0.05)
+
+    for i in range(n):
+        # plot original image
+        ax = plt.subplot(gs[0, i])
+        plt.imshow(images[i].reshape(28, 28), cmap='gray')
+        ax.axis('off')
+
+        # plot reconstructed image
+        ax = plt.subplot(gs[1, i])
+        plt.imshow(reconstructed_images[i].reshape(28, 28), cmap='gray')
+        ax.axis('off')
+
+    plt.savefig(f'./comparison_images/epoch_{epoch}.png', bbox_inches='tight')
+    plt.close(fig)
 
 
 class Autoencoder(nn.Module):
@@ -233,7 +257,7 @@ if __name__ == '__main__':
         # training
         model.train()
         loss_train = 0.0
-        for images, _ in train_dataloader:
+        for i, (images, _) in train_dataloader:
             images = images.to(device)
             batch_size = images.shape[0]
             reconstructed_images = model(images)
@@ -244,6 +268,9 @@ if __name__ == '__main__':
             optimizer.step()
 
             loss_train += loss.item()
+
+            if i == 0:  # for the first batch of each epoch
+                plot_comparison(images, reconstructed_images, epoch)
 
         if epoch % step == 0:
             train_losses.append(loss_train / len(train_dataloader))
