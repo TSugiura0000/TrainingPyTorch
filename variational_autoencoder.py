@@ -257,7 +257,7 @@ if __name__ == '__main__':
         # training
         model.train()
         loss_train = 0.0
-        for i, (images, _) in train_dataloader:
+        for i, (images, _) in enumerate(train_dataloader):
             images = images.to(device)
             batch_size = images.shape[0]
             reconstructed_images = model(images)
