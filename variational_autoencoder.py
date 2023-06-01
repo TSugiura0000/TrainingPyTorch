@@ -220,7 +220,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters())
 
     # training setting
-    n_epochs = 10
+    n_epochs = 100
     step = 1
 
     train_losses = []
