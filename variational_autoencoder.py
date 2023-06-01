@@ -400,7 +400,7 @@ if __name__ == '__main__':
         decoder_conv_t_channels=[64, 64, 32, 1],
         decoder_conv_t_kernel_size=[3, 3, 3, 3],
         decoder_conv_t_strides=[1, 2, 2, 1],
-        z_dim=1000
+        z_dim=100
     )
     model.to(device=device)
 
