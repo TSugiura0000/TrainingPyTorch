@@ -41,7 +41,7 @@ class Autoencoder(nn.Module):
             decoder_conv_t_channels: list,
             decoder_conv_t_kernel_size: list,
             decoder_conv_t_strides: list,
-            z_dim: int = 3
+            z_dim: int = 3,
     ) -> None:
         if not (len(encoder_conv_channels)
                 == len(encoder_conv_kernel_size)
@@ -206,7 +206,7 @@ if __name__ == '__main__':
         decoder_conv_t_channels=[64, 64, 32, 1],
         decoder_conv_t_kernel_size=[3, 3, 3, 3],
         decoder_conv_t_strides=[1, 2, 2, 1],
-        z_dim=10
+        z_dim=1000
     )
     model.to(device=device)
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters())
 
     # training setting
-    n_epochs = 100
+    n_epochs = 10
     step = 1
 
     train_losses = []
@@ -280,7 +280,7 @@ if __name__ == '__main__':
     train_loss = np.array(train_losses)
     test_loss = np.array(test_losses)
 
-    figure = plt.figure(figsize=(15, 7))
+    figure = plt.figure(figsize=(8, 7))
     axis = figure.add_subplot(111)
     axis.plot(
         [i * step for i in range(1, n_epochs // step + 1)],
