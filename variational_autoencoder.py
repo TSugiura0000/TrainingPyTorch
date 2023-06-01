@@ -415,7 +415,7 @@ if __name__ == '__main__':
 
     # training setting
     n_epochs = 100
-    step = 1
+    step = 10
 
     train_losses = []
     test_losses = []
