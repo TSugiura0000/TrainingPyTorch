@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 import numpy as np
@@ -33,6 +34,11 @@ def create_mnist_dataloader(n_batch: int = 256):
 
 
 def plot_comparison(images, reconstructed_images, epoch, n=10):
+    dir_path = './comparison_images/'
+
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
     images = images.cpu().numpy()
     reconstructed_images = reconstructed_images.cpu().detach().numpy()
 
