@@ -294,8 +294,8 @@ if __name__ == '__main__':
     axis.set_ylabel('Loss')
     axis.legend()
 
-    save_path_as_pdf = '.result/mnist_autoencoder_sgd.pdf'
-    save_path_as_png = '.result/mnist_autoencoder_sgd.png'
+    save_path_as_pdf = './result/mnist_autoencoder_sgd.pdf'
+    save_path_as_png = './result/mnist_autoencoder_sgd.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     plt.show()
