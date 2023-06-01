@@ -61,6 +61,170 @@ def plot_comparison(images, reconstructed_images, epoch, n=10):
     plt.close(fig)
 
 
+class VariationalAutoencoder(nn.Module):
+    def __init__(
+            self,
+            input_dim: tuple,
+            encoder_conv_channels: list,
+            encoder_conv_kernel_size: list,
+            encoder_conv_strides: list,
+            decoder_conv_t_channels: list,
+            decoder_conv_t_kernel_size: list,
+            decoder_conv_t_strides: list,
+            z_dim: int = 3,
+    ) -> None:
+        if not (len(encoder_conv_channels)
+                == len(encoder_conv_kernel_size)
+                == len(encoder_conv_strides)):
+            raise ValueError(
+                "List size of 'encoder_conv_filters',"
+                " 'encoder_conv_kernel_size', and 'encoder_conv_strides' "
+                "must be same."
+            )
+        if not (len(decoder_conv_t_channels)
+                == len(decoder_conv_t_kernel_size)
+                == len(decoder_conv_t_strides)):
+            raise ValueError(
+                "List size of 'decoder_conv_t_filters', "
+                "'decoder_conv_t_kernel_size', and 'decoder_conv_t_strides' "
+                "must be same."
+            )
+        super().__init__()
+        self._input_dim = input_dim
+        self._encoder_conv_channels = encoder_conv_channels
+        self._encoder_conv_kernel_size = encoder_conv_kernel_size
+        self._encoder_conv_strides = encoder_conv_strides
+        self._decoder_conv_t_channels = decoder_conv_t_channels
+        self._decoder_conv_t_kernel_size = decoder_conv_t_kernel_size
+        self._decoder_conv_t_strides = decoder_conv_t_strides
+        self._z_dim = z_dim
+
+        # Encoder
+        encoder_conv_layers = []
+        out_height = input_dim[1]
+        out_width = input_dim[2]
+        pad = 1
+        dil = 1
+        for i, (k_size, stride) in enumerate(
+            zip(
+                self._encoder_conv_kernel_size,
+                self._encoder_conv_strides
+            )
+        ):
+            if i == 0:
+                input_channels = self._input_dim[0]
+            else:
+                input_channels = self._encoder_conv_channels[i - 1]
+            encoder_conv_layers.append(
+                nn.Conv2d(
+                    input_channels,
+                    self._encoder_conv_channels[i],
+                    kernel_size=k_size,
+                    stride=stride,
+                    padding=pad
+                )
+            )
+            out_height = int(np.floor(
+                (out_height + 2 * pad - dil * (k_size - 1) - 1) / stride + 1
+            ))
+            out_width = int(np.floor(
+                (out_width + 2 * pad - dil * (k_size - 1) - 1) / stride + 1
+            ))
+        self._encoder_conv_layers = nn.ModuleList(encoder_conv_layers)
+        self._input_encode_linear = \
+            self._encoder_conv_channels[-1] * out_height * out_width
+        self._pre_reshape_height_of_encoder = out_height
+        self._pre_reshape_width_of_encoder = out_width
+        self._mu = nn.Linear(
+            self._input_encode_linear,
+            self._z_dim
+        )
+        self._log_var = nn.Linear(
+            self._input_encode_linear,
+            self._z_dim
+        )
+
+        # Decoder
+        self._output_decode_linear = self._input_encode_linear
+        self._decoder_input_linear = nn.Linear(
+            z_dim,
+            self._output_decode_linear
+        )
+        decoder_conv_t_layers = []
+        out_height = self._pre_reshape_height_of_encoder
+        out_width = self._pre_reshape_width_of_encoder
+        pad = 1
+        dil = 1
+        output_padding = [st - 1 for st in self._decoder_conv_t_strides]
+        for i, (k_size, stride, out_pad) in enumerate(zip(
+                self._decoder_conv_t_kernel_size,
+                self._decoder_conv_t_strides,
+                output_padding
+        )):
+            if i == 0:
+                input_conv_t = self._decoder_conv_t_channels[0]
+            else:
+                input_conv_t = self._decoder_conv_t_channels[i - 1]
+            decoder_conv_t_layers.append(
+                nn.ConvTranspose2d(
+                    input_conv_t,
+                    self._decoder_conv_t_channels[i],
+                    kernel_size=k_size,
+                    stride=stride,
+                    padding=pad,
+                    output_padding=out_pad
+                )
+            )
+            out_height = \
+                (out_height - 1) * stride - 2 * pad + dil * (k_size - 1) \
+                + out_pad + 1
+            out_width = \
+                (out_width - 1) * stride - 2 * pad + dil * (k_size - 1) \
+                + out_pad + 1
+        self._decoder_conv_t_layers = nn.ModuleList(decoder_conv_t_layers)
+
+    def forward(self, x: torch.Tensor) \
+            -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        # Encoder
+        for conv in self._encoder_conv_layers:
+            x = conv(x)
+            x = F.relu(x)
+        x = x.view(
+            -1,
+            self._input_encode_linear
+        )
+        mu = self._mu(x)
+        log_var = self._log_var(x)
+        x = VariationalAutoencoder.sampling(mu, log_var)
+
+        # Decoder
+        x = self._decoder_input_linear(x)
+        x = x.view(
+            -1,
+            self._decoder_conv_t_channels[0],
+            self._pre_reshape_height_of_encoder,
+            self._pre_reshape_width_of_encoder
+        )
+        for i, conv_t in enumerate(self._decoder_conv_t_layers):
+            x = conv_t(x)
+            if i < len(self._decoder_conv_t_layers) - 1:
+                x = F.relu(x)
+            else:
+                x = F.sigmoid(x)
+        return x, mu, log_var
+
+    @staticmethod
+    def sampling(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(log_var / 2)
+        epsilon = torch.randn_like(std)
+        return mu + epsilon * std
+
+    def loss_function(self, recon_x, x, mu, logvar):
+        bce = torch.sqrt(F.mse_loss(recon_x, x))
+        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        return bce + kld
+
+
 class Autoencoder(nn.Module):
     def __init__(
             self,
@@ -228,7 +392,7 @@ if __name__ == '__main__':
     print('Completed Loading DataLoader\n')
 
     # create model and move to 'device'
-    model = Autoencoder(
+    model = VariationalAutoencoder(
         input_dim=(1, 28, 28),
         encoder_conv_channels=[32, 64, 64, 64],
         encoder_conv_kernel_size=[3, 3, 3, 3],
@@ -241,7 +405,7 @@ if __name__ == '__main__':
     model.to(device=device)
 
     # loss function
-    loss_fn = RMSELoss()
+    # loss_fn = RMSELoss()
 
     # learning rate
     lr = 1e-6
@@ -266,8 +430,10 @@ if __name__ == '__main__':
         for i, (images, _) in enumerate(train_dataloader):
             images = images.to(device)
             batch_size = images.shape[0]
-            reconstructed_images = model(images)
-            loss = loss_fn(reconstructed_images, images)
+            reconstructed_images, mu, log_var = model(images)
+            loss = model.loss_function(
+                reconstructed_images, images, mu, log_var
+            )
 
             optimizer.zero_grad()
             loss.backward()
@@ -289,8 +455,10 @@ if __name__ == '__main__':
             for images, _ in test_dataloader:
                 images = images.to(device)
                 batch_size = images.shape[0]
-                reconstructed_images = model(images)
-                loss = loss_fn(reconstructed_images, images)
+                reconstructed_images, mu, log_var = model(images)
+                loss = model.loss_function(
+                    reconstructed_images, images, mu, log_var
+                )
                 loss_test += loss.item()
 
             if epoch % step == 0:
