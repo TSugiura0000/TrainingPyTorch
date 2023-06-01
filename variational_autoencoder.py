@@ -214,13 +214,13 @@ if __name__ == '__main__':
     loss_fn = RMSELoss()
 
     # learning rate
-    lr = 1e-2
+    # lr = 1e-2
 
     # optimizer
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters())
 
     # training setting
-    n_epochs = 10
+    n_epochs = 100
     step = 1
 
     train_losses = []
@@ -228,6 +228,7 @@ if __name__ == '__main__':
 
     print('====== Start training and test ======')
     start_time = datetime.now()
+    print('Start time: ', start_time)
     for epoch in range(1, n_epochs + 1):
         # training
         model.train()
@@ -265,7 +266,7 @@ if __name__ == '__main__':
         if epoch % step == 0 or epoch == 1:
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             print(
-                'Time: {}, Epoch: {}, Training oss: {}, Test loss: {}'.format(
+                'Time: {}, Epoch: {}, Training loss: {}, Test loss: {}'.format(
                     current_time,
                     epoch,
                     float(train_losses[-1]),
