@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # setting device
     device = torch.device('cuda') \
         if torch.cuda.is_available() else torch.device('cpu')
-    print('device: ', device)
+    print('Device: ', device)
 
     # load dataloader
     print('Loading DataLoader . . .')
@@ -190,4 +190,4 @@ if __name__ == '__main__':
     save_path_as_png = './result/mnist_conv_nn_sgd.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
-    plt.show()
+    plt.close(fig=figure)
