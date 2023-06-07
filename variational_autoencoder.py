@@ -10,6 +10,7 @@ import matplotlib.gridspec as gridspec
 from torch import optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+from torchinfo import summary
 
 
 def create_mnist_dataloader(n_batch: int = 256):
@@ -33,14 +34,18 @@ def create_mnist_dataloader(n_batch: int = 256):
     return train_loader, test_loader
 
 
-def plot_comparison(images, reconstructed_images, epoch, n=10):
+def plot_comparison(x: torch.Tensor, re_x: torch.Tensor,
+                    epoch_num: int, n: int = 10) -> None:
     dir_path = './comparison_images/'
 
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-    images = images.cpu().numpy()
-    reconstructed_images = reconstructed_images.cpu().detach().numpy()
+    x = x.cpu().numpy()
+    re_x = re_x.cpu().detach().numpy()
+
+    x = 255 / (np.max(x) - np.min(x)) * x - np.min(x)
+    re_x = 255 / (np.max(re_x) - np.min(re_x)) * re_x - np.min(re_x)
 
     fig = plt.figure(figsize=(20, 4))
     gs = gridspec.GridSpec(2, n)
@@ -49,15 +54,17 @@ def plot_comparison(images, reconstructed_images, epoch, n=10):
     for i in range(n):
         # plot original image
         ax = plt.subplot(gs[0, i])
-        plt.imshow(images[i].reshape(28, 28), cmap='gray')
+        plt.imshow(x[i].reshape(28, 28), cmap='gray')
         ax.axis('off')
 
         # plot reconstructed image
         ax = plt.subplot(gs[1, i])
-        plt.imshow(reconstructed_images[i].reshape(28, 28), cmap='gray')
+        plt.imshow(re_x[i].reshape(28, 28), cmap='gray')
         ax.axis('off')
 
-    plt.savefig(f'./comparison_images/epoch_{epoch}.png', bbox_inches='tight')
+    plt.savefig(
+        f'./comparison_images/epoch_{epoch_num}.pdf', bbox_inches='tight'
+    )
     plt.close(fig)
 
 
@@ -188,14 +195,14 @@ class VariationalAutoencoder(nn.Module):
         # Encoder
         for conv in self._encoder_conv_layers:
             x = conv(x)
-            x = F.relu(x)
+            x = F.leaky_relu(x)
         x = x.view(
             -1,
             self._input_encode_linear
         )
-        mu = self._mu(x)
-        log_var = self._log_var(x)
-        x = VariationalAutoencoder.sampling(mu, log_var)
+        _mu = self._mu(x)
+        _log_var = self._log_var(x)
+        x = VariationalAutoencoder.sampling(_mu, _log_var)
 
         # Decoder
         x = self._decoder_input_linear(x)
@@ -208,17 +215,84 @@ class VariationalAutoencoder(nn.Module):
         for i, conv_t in enumerate(self._decoder_conv_t_layers):
             x = conv_t(x)
             if i < len(self._decoder_conv_t_layers) - 1:
-                x = F.relu(x)
+                x = F.leaky_relu(x)
             else:
                 x = F.sigmoid(x)
-        return x, mu, log_var
+        return x, _mu, _log_var
 
     @staticmethod
-    def sampling(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
-        std = torch.exp(log_var / 2)
+    def sampling(mu_: torch.Tensor, log_var_: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(log_var_ / 2)
         epsilon = torch.randn_like(std)
-        return mu + epsilon * std
+        return mu_ + epsilon * std
 
+    def loss_function(self, recon_x, x, mu, logvar):
+        bce = torch.sqrt(F.mse_loss(recon_x, x))
+        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        return bce + kld
+
+
+class SimpleVAE(nn.Module):
+    def __init__(self, input_dim: tuple, z_dim: int = 64):
+        super().__init__()
+        self._input_dim = input_dim
+        self._input_channels = input_dim[0]
+        self._input_height = input_dim[1]
+        self._input_width = input_dim[2]
+        self._z_dim = z_dim
+
+        # Encoder
+        self._encoder_linear = nn.Linear(
+            self._input_channels * self._input_height * self._input_width,
+            256
+        )
+        self._mu = nn.Linear(
+            256,
+            self._z_dim
+        )
+        self._log_var = nn.Linear(
+            256,
+            self._z_dim
+        )
+
+        # Decoder
+        self._decoder_linear = nn.Linear(
+            self._z_dim,
+            self._input_channels * self._input_height * self._input_width
+        )
+
+    def forward(self, x):
+        # reshape
+        x = x.view(
+            -1,
+            self._input_channels * self._input_height * self._input_width
+        )
+
+        # encoder
+        x = self._encoder_linear(x)
+        x = F.relu(x)
+        _mu = self._mu(x)
+        _log_var = self._log_var(x)
+        x = SimpleVAE.sampling(_mu, _log_var)
+
+        # decoder
+        x = self._decoder_linear(x)
+        x = F.relu(x)
+        x = x.view(
+            -1,
+            self._input_channels,
+            self._input_height,
+            self._input_width
+        )
+        return x, _mu, _log_var
+
+    @staticmethod
+    def sampling(mu_: torch.Tensor, log_var_: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(log_var_ / 2)
+        epsilon = torch.randn_like(std)
+        return mu_ + epsilon * std
+
+    @staticmethod
     def loss_function(self, recon_x, x, mu, logvar):
         bce = torch.sqrt(F.mse_loss(recon_x, x))
         kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
@@ -347,7 +421,7 @@ class Autoencoder(nn.Module):
         # Encoder
         for conv in self._encoder_conv_layers:
             x = conv(x)
-            x = F.relu(x)
+            x = F.leaky_relu(x)
         x = x.view(
             -1,
             self._input_encode_linear
@@ -365,7 +439,7 @@ class Autoencoder(nn.Module):
         for i, conv_t in enumerate(self._decoder_conv_t_layers):
             x = conv_t(x)
             if i < len(self._decoder_conv_t_layers) - 1:
-                x = F.relu(x)
+                x = F.leaky_relu(x)
             else:
                 x = F.sigmoid(x)
         return x
@@ -392,17 +466,32 @@ if __name__ == '__main__':
     print('Completed Loading DataLoader\n')
 
     # create model and move to 'device'
-    model = VariationalAutoencoder(
+    # model = VariationalAutoencoder(
+    #     input_dim=(1, 28, 28),
+    #     encoder_conv_channels=[32, 64, 64, 64],
+    #     encoder_conv_kernel_size=[3, 3, 3, 3],
+    #     encoder_conv_strides=[1, 2, 2, 1],
+    #     decoder_conv_t_channels=[64, 64, 32, 1],
+    #     decoder_conv_t_kernel_size=[3, 3, 3, 3],
+    #     decoder_conv_t_strides=[1, 2, 2, 1],
+    #     z_dim=16
+    # )
+    model = SimpleVAE(
         input_dim=(1, 28, 28),
-        encoder_conv_channels=[32, 64, 64, 64],
-        encoder_conv_kernel_size=[3, 3, 3, 3],
-        encoder_conv_strides=[1, 2, 2, 1],
-        decoder_conv_t_channels=[64, 64, 32, 1],
-        decoder_conv_t_kernel_size=[3, 3, 3, 3],
-        decoder_conv_t_strides=[1, 2, 2, 1],
-        z_dim=100
+        z_dim=64
     )
     model.to(device=device)
+    summary(
+        model,
+        input_size=(256, 1, 28, 28),
+        col_names=[
+            'input_size',
+            'output_size',
+            'num_params',
+            'kernel_size',
+            'mult_adds'
+        ],
+    )
 
     # loss function
     # loss_fn = RMSELoss()
@@ -414,8 +503,8 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     # training setting
-    n_epochs = 100
-    step = 10
+    n_epochs = 200
+    step = 1
 
     train_losses = []
     test_losses = []
@@ -496,8 +585,8 @@ if __name__ == '__main__':
     axis.set_ylabel('Loss')
     axis.legend()
 
-    save_path_as_pdf = './result/mnist_autoencoder_sgd.pdf'
-    save_path_as_png = './result/mnist_autoencoder_sgd.png'
+    save_path_as_pdf = './result/mnist_autoencoder.pdf'
+    save_path_as_png = './result/mnist_autoencoder.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     plt.show()
