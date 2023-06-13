@@ -12,6 +12,10 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from torchinfo import summary
 
+# setting device
+device = torch.device('cuda') \
+    if torch.cuda.is_available() else torch.device('cpu')
+
 
 def create_mnist_dataloader(n_batch: int = 256):
     # setting
@@ -19,7 +23,7 @@ def create_mnist_dataloader(n_batch: int = 256):
 
     # load dataset
     transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,)), ]
+        [transforms.ToTensor()]
     )
     train_set = datasets.MNIST(
         data_path, download=True, train=True, transform=transform
@@ -226,15 +230,18 @@ class VariationalAutoencoder(nn.Module):
         epsilon = torch.randn_like(std)
         return mu_ + epsilon * std
 
-    def loss_function(self, recon_x, x, mu, logvar):
-        bce = torch.sqrt(F.mse_loss(recon_x, x))
-        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    @staticmethod
+    def loss_function(recon_x, x, mu_, log_var_):
+        bce = F.mse_loss(recon_x, x)
+        kld = -0.5 * torch.sum(
+            1 + log_var_ - torch.square(mu_) - torch.exp(log_var_)
+        )
         return bce + kld
 
 
 class SimpleVAE(nn.Module):
     def __init__(self, input_dim: tuple, z_dim: int = 64):
-        super().__init__()
+        super(SimpleVAE, self).__init__()
         self._input_dim = input_dim
         self._input_channels = input_dim[0]
         self._input_height = input_dim[1]
@@ -242,61 +249,62 @@ class SimpleVAE(nn.Module):
         self._z_dim = z_dim
 
         # Encoder
-        self._encoder_linear = nn.Linear(
+        self._encoder_linear1 = nn.Linear(
             self._input_channels * self._input_height * self._input_width,
-            256
+            512
         )
-        self._mu = nn.Linear(
-            256,
-            self._z_dim
-        )
-        self._log_var = nn.Linear(
-            256,
-            self._z_dim
-        )
+        self._encoder_linear2 = nn.Linear(512, 64)
+        self._mu = nn.Linear(64, self._z_dim)
+        self._log_var = nn.Linear(64, self._z_dim)
 
         # Decoder
-        self._decoder_linear = nn.Linear(
-            self._z_dim,
+        self._decoder_linear1 = nn.Linear(self._z_dim, 64)
+        self._decoder_linear2 = nn.Linear(64, 512)
+        self._decoder_linear3 = nn.Linear(
+            512,
             self._input_channels * self._input_height * self._input_width
         )
+
+    def encoder(self, x):
+        x = F.relu(self._encoder_linear1(x))
+        x = F.relu(self._encoder_linear2(x))
+        mu_ = self._mu(x)
+        log_var_ = self._log_var(x)
+        return x, mu_, log_var_
+
+    def decoder(self, z):
+        x = F.relu(self._decoder_linear1(z))
+        x = F.relu(self._decoder_linear2(x))
+        x = F.sigmoid(self._decoder_linear3(x))
+        return x
 
     def forward(self, x):
-        # reshape
-        x = x.view(
-            -1,
-            self._input_channels * self._input_height * self._input_width
+        x = torch.flatten(x, start_dim=1)
+        x, mu_, log_var_ = self.encoder(x)
+        z = self.sampling(mu_, log_var_)
+        x = self.decoder(z)
+        x = x.reshape(
+            (
+                -1,
+                self._input_channels,
+                self._input_height,
+                self._input_width
+            )
         )
+        return x, z, mu_, log_var_
 
-        # encoder
-        x = self._encoder_linear(x)
-        x = F.relu(x)
-        _mu = self._mu(x)
-        _log_var = self._log_var(x)
-        x = SimpleVAE.sampling(_mu, _log_var)
-
-        # decoder
-        x = self._decoder_linear(x)
-        x = F.relu(x)
-        x = x.view(
-            -1,
-            self._input_channels,
-            self._input_height,
-            self._input_width
-        )
-        return x, _mu, _log_var
-
-    @staticmethod
-    def sampling(mu_: torch.Tensor, log_var_: torch.Tensor) -> torch.Tensor:
+    def sampling(self, mu_: torch.Tensor, log_var_: torch.Tensor) \
+            -> torch.Tensor:
         std = torch.exp(log_var_ / 2)
-        epsilon = torch.randn_like(std)
+        epsilon = torch.randn(mu_.shape, device=device)
         return mu_ + epsilon * std
 
-    @staticmethod
-    def loss_function(self, recon_x, x, mu, logvar):
-        bce = torch.sqrt(F.mse_loss(recon_x, x))
-        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return bce + kld
+    def loss_function(self, recon_x, x, mu_, log_var_):
+        bce = F.mse_loss(recon_x, x, reduction='sum')
+        kl = -0.5 * torch.sum(
+            1 + log_var_ - torch.square(mu_) - torch.exp(log_var_)
+        )
+        return bce + kl
 
 
 class Autoencoder(nn.Module):
@@ -445,24 +453,38 @@ class Autoencoder(nn.Module):
         return x
 
 
-class RMSELoss(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.mse = nn.MSELoss()
+def plot_latent(vae, data, num_batch=128):
+    plt.figure()
+    for i, (x, y) in enumerate(data):
+        re_x, z, _, _ = vae(x.to(device))
+        z = z.to('cpu').detach().numpy()
+        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
+        if i > num_batch:
+            plt.colorbar()
+            break
+    plt.show()
 
-    def forward(self, reconstructed_x, x) -> torch.Tensor:
-        return torch.sqrt(self.mse(reconstructed_x, x))
+
+def plot_reconstructed(vae, r0=(-5, 10), r1=(-10, 5), n=12):
+    plt.figure()
+    w = 28
+    img = np.zeros((n*w, n*w))
+    for i, y in enumerate(np.linspace(*r1, n)):
+        for j, x in enumerate(np.linspace(*r0, n)):
+            z = torch.Tensor([[x, y]]).to(device)
+            re_x = vae.decoder(z)
+            re_x = re_x.reshape(w, w).to('cpu').detach().numpy()
+            img[(n-1-i)*w:(n-1-i+1)*w, j*w:(j+1)*w] = re_x
+    plt.imshow(img, extent=[*r0, *r1])
+    plt.show()
 
 
 if __name__ == '__main__':
-    # setting device
-    device = torch.device('cuda') \
-        if torch.cuda.is_available() else torch.device('cpu')
     print('Device: ', device)
 
     # load dataloader
     print('Loading DataLoader . . .')
-    train_dataloader, test_dataloader = create_mnist_dataloader()
+    train_dataloader, test_dataloader = create_mnist_dataloader(n_batch=128)
     print('Completed Loading DataLoader\n')
 
     # create model and move to 'device'
@@ -478,7 +500,7 @@ if __name__ == '__main__':
     # )
     model = SimpleVAE(
         input_dim=(1, 28, 28),
-        z_dim=64
+        z_dim=2
     )
     model.to(device=device)
     summary(
@@ -497,19 +519,20 @@ if __name__ == '__main__':
     # loss_fn = RMSELoss()
 
     # learning rate
-    lr = 1e-6
+    # lr = 1e-5
 
     # optimizer
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters())
 
     # training setting
-    n_epochs = 200
+    n_epochs = 1000
     step = 1
 
     train_losses = []
     test_losses = []
+    early_stop_counter = 0
 
-    print('====== Start training and test ======')
+    print('\n====== Start training and test ======')
     start_time = datetime.now()
     print('Start time: ', start_time)
     for epoch in range(1, n_epochs + 1):
@@ -519,7 +542,7 @@ if __name__ == '__main__':
         for i, (images, _) in enumerate(train_dataloader):
             images = images.to(device)
             batch_size = images.shape[0]
-            reconstructed_images, mu, log_var = model(images)
+            reconstructed_images, _, mu, log_var = model(images)
             loss = model.loss_function(
                 reconstructed_images, images, mu, log_var
             )
@@ -544,7 +567,7 @@ if __name__ == '__main__':
             for images, _ in test_dataloader:
                 images = images.to(device)
                 batch_size = images.shape[0]
-                reconstructed_images, mu, log_var = model(images)
+                reconstructed_images, _, mu, log_var = model(images)
                 loss = model.loss_function(
                     reconstructed_images, images, mu, log_var
                 )
@@ -563,6 +586,16 @@ if __name__ == '__main__':
                     float(test_losses[-1])
                 )
             )
+
+        if min(test_losses) < test_losses[-1]:
+            early_stop_counter += 1
+        else:
+            early_stop_counter = 0
+
+        if early_stop_counter >= 5:
+            print('early stopping')
+            break
+
     end_time = datetime.now()
     print('training time: ', end_time - start_time)
 
@@ -573,11 +606,11 @@ if __name__ == '__main__':
     figure = plt.figure(figsize=(8, 7))
     axis = figure.add_subplot(111)
     axis.plot(
-        [i * step for i in range(1, n_epochs // step + 1)],
+        [i * step for i in range(1, len(train_losses) + 1)],
         train_loss, label='Train loss'
     )
     axis.plot(
-        [i * step for i in range(1, n_epochs // step + 1)],
+        [i * step for i in range(1, len(test_losses) + 1)],
         test_loss, label='Test loss'
     )
     axis.set_title('Autoencoder')
@@ -590,3 +623,6 @@ if __name__ == '__main__':
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     plt.show()
+
+    plot_latent(model, test_dataloader)
+    plot_reconstructed(model)
