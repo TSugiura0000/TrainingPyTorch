@@ -7,7 +7,7 @@ import GPUtil
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import tqdm as tqdm
+from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from torch import optim
