@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
 from torch import optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -17,7 +16,7 @@ device = torch.device('cuda') \
     if torch.cuda.is_available() else torch.device('cpu')
 
 
-def create_mnist_dataloader(n_batch: int = 256):
+def create_mnist_dataloader(n_batch: int = 64):
     # setting
     data_path = './datasets/MNIST_data'
     if not os.path.exists(data_path):
@@ -182,12 +181,61 @@ class Generator(nn.Module):
         return x
 
 
-def train_discriminator():
-    pass
+def train_gan(
+        epoch_num: int,
+        data_loader: DataLoader,
+        discriminator_: nn.Module,
+        generator_: nn.Module,
+        d_optimizer_: optim,
+        g_optimizer_: optim,
+        z_dim_,
+):
+    d_real_losses = []
+    d_fake_losses = []
+    d_mean_losses = []
+    g_losses = []
+    for epoch in range(epoch_num):
+        for x, _ in data_loader:
+            batch_size_ = x.size(0)
 
+            # create labels
+            real_label = torch.ones(batch_size_, device=device)
+            fake_label = torch.zeros(batch_size_, device=device)
 
-def train_generator():
-    pass
+            # --- train discriminator --- #
+            d_optimizer_.zero_grad()
+            # real data
+            _, d_real_loss = discriminator_(x, real_label)
+            # fake data
+            z = torch.randn(batch_size_, z_dim_)
+            fake_x = generator_(z.detach())
+            _, d_fake_loss = discriminator_(fake_x, fake_label)
+            d_loss = d_real_loss + d_fake_loss
+
+            d_real_losses.append(d_real_loss)
+            d_fake_losses.append(d_fake_loss)
+            d_mean_losses.append(d_loss / 2)
+
+            d_loss.backward()
+            d_optimizer_.step()
+            # --- train discriminator --- #
+
+            # --- train generator --- #
+            g_optimizer_.zero_grad()
+            _, g_loss = discriminator_(fake_x, real_label)
+
+            g_losses.append(g_loss)
+
+            g_loss.backward()
+            g_optimizer_.step()
+            # --- train generator --- #
+
+        print(f'Epoch: {epoch + 1}/{epoch_num} \t '
+              f'Discriminator Real Loss: {d_real_losses[epoch]:.4f} \t'
+              f'Discriminator Fake Loss: {d_fake_losses[epoch]:.4f} \t'
+              f'Discriminator Mean of Real and Fake Loss: '
+              f'{d_mean_losses[epoch]:.4f}\t'
+              f'Generator Loss: {g_losses[epoch]:.4f}')
 
 
 if __name__ == '__main__':
@@ -196,12 +244,14 @@ if __name__ == '__main__':
 
     # load dataloader
     print('Loading DataLoader . . .')
-    train_dataloader = create_mnist_dataloader(n_batch=128)
+    batch_size = 64
+    train_dataloader = create_mnist_dataloader(n_batch=batch_size)
     print('Completed Loading DataLoader\n')
 
     # setting model
+    z_dim = 100
     generator = Generator(
-        z_dim=100,
+        z_dim=z_dim,
         init_linear_size=(64, 7, 7),
         conv_kernel_size=[3, 3, 3, 3],
         conv_kernel_filter=[128, 64, 64, 1],
@@ -220,8 +270,35 @@ if __name__ == '__main__':
     generator.to(device=device)
     discriminator.to(device=device)
 
+    # summary
+    img_data = torch.randn(batch_size, 1, 28, 28)
+    labels = torch.randn(batch_size, 1)
+    summary(
+        discriminator,
+        input_data=[img_data, labels],
+        col_names=[
+            'input_size',
+            'output_size',
+            'num_params',
+            'kernel_size',
+            'mult_adds'
+        ],
+        batch_dim=0
+    )
+    summary(
+        generator,
+        input_size=(batch_size, z_dim),
+        col_names=[
+            'input_size',
+            'output_size',
+            'num_params',
+            'kernel_size',
+            'mult_adds'
+        ]
+    )
+
     # setting optimizer
-    generator_optimizer = optim.Adam(generator.parameters(), lr=0.0002)
     discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
+    generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
-
+    train_gan()
