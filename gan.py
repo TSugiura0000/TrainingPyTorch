@@ -2,11 +2,13 @@ import os
 import time
 from datetime import datetime, timedelta
 
+import numpy as np
 import psutil
 import GPUtil
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -19,6 +21,10 @@ from torchinfo import summary
 device = torch.device('cuda') \
     if torch.cuda.is_available() else torch.device('cpu')
 
+# create directory for generated images
+gen_image_path = './gan_generated_images'
+if not os.path.exists(gen_image_path):
+    os.makedirs(gen_image_path)
 
 def print_system_info():
     # CPU usage
@@ -82,6 +88,41 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
         f'./gan_comparison_images/epoch_{epoch}.pdf', bbox_inches='tight'
     )
     plt.close(fig)
+
+
+def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
+    d_real_loss = np.array(d_real)
+    d_fake_loss = np.array(d_fake)
+    d_mean_loss = np.array(d_mean)
+    g_loss = np.array(g)
+
+    figure = plt.figure(fisize=(8, 7))
+    axis = figure.add_subplot(111)
+    axis.plot(
+        np.arange(1, len(d_real_loss) + 1), d_real_loss,
+        label='Discriminator Loss (Real data)'
+    )
+    axis.plot(
+        np.arrange(1, len(d_fake_loss) + 1), d_fake_loss,
+        label='Discriminator Loss (Fake data)'
+    )
+    axis.plot(
+        np.arrange(1, len(d_mean_loss) + 1), d_mean_loss,
+        label='Discriminator Loss (Mean)'
+    )
+    axis.plot(
+        np.arange(1, len(g_loss) + 1), g_loss, label='Generator Loss'
+    )
+    axis.set_title('Generative Adversarial Networks')
+    axis.set_xlabel('Epoch')
+    axis.set_ylabel('Loss')
+    axis.legend()
+
+    save_path_as_pdf = './result/mnist_gan.pdf'
+    save_path_as_png = './result/mnist_gan.png'
+    plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
+    plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
+    plt.show()
 
 
 class Discriminator(nn.Module):
@@ -240,15 +281,14 @@ def train_gan(
         d_optimizer_: optim,
         g_optimizer_: optim,
         z_dim_,
+        batch_size_
 ):
     d_real_losses = []
     d_fake_losses = []
     d_mean_losses = []
     g_losses = []
-    start_time = datetime.now()
-    print(start_time)
+    fixed_z = torch.randn(batch_size_, z_dim_)
     for epoch in tqdm(range(epoch_num_)):
-        epoch_start = time.time()
         for x, _ in data_loader:
             x = x.to(device=device)
             batch_size_ = x.size(0)
@@ -286,18 +326,23 @@ def train_gan(
             # --- train generator --- #
 
             # save figure
+            generator.eval()
+            with torch.no_grad():
+                fake_images = generator(fixed_z)
+            generator.train()
+
+            grid = torchvision.utils.make_grid(
+                fake_images[:64], padding=2, normalize=True
+            )
+            torchvision.utils.save_image(
+                grid, f'./gan_generated_images/image_{epoch+1}.pdf')
             plot_comparison(x, fake_x, epoch + 1, image_num=10)
 
-        epoch_end = time.time()
-        elapsed_time = epoch_end - epoch_start
-        formatted_time = str(timedelta(seconds=elapsed_time))
-        print(f'({formatted_time}) Epoch: {epoch + 1}/{epoch_num} \t '
+        print(f'Epoch: {epoch + 1}/{epoch_num} \t '
               f'Discriminator Loss: (Real: {d_real_losses[epoch]:.4f}, '
               f'Fake: {d_fake_losses[epoch]:.4f}, '
               f'Mean: {d_mean_losses[epoch]:.4f})\t'
               f'Generator Loss: {g_losses[epoch]:.4f}')
-    end_time = datetime.now()
-    print(end_time)
 
 
 if __name__ == '__main__':
@@ -372,5 +417,6 @@ if __name__ == '__main__':
         generator_=generator,
         d_optimizer_=discriminator_optimizer,
         g_optimizer_=generator_optimizer,
-        z_dim_=z_dim
+        z_dim_=z_dim,
+        batch_size_=batch_size
     )
