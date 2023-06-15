@@ -60,6 +60,7 @@ class Discriminator(nn.Module):
             conv_kernel_filter = [64, 64, 128, 128]
         if activation == 'leaky_relu':
             activate_fn = nn.LeakyReLU(inplace=True)
+
         self._input_dim = input_dim
         self._conv_kernel_size = conv_kernel_size
         self._conv_kernel_filter = conv_kernel_filter
@@ -101,13 +102,13 @@ class Generator(nn.Module):
     def __init__(
             self,
             z_dim: int = 100,
-            init_linear_size: tuple = (7, 7, 64),
+            init_linear_size: tuple = (64, 7, 7),
             conv_kernel_size: None or list = None,
             conv_kernel_filter: None or list = None,
             dropout_rate: float = 0.0,
             batch_norm: bool = True,
             activation: str = 'relu',
-            output_dim: tuple = (1, 28, 28)
+            output_size: tuple = (1, 28, 28)
     ) -> None:
         """Discriminator
         The number of elements in the list
@@ -133,15 +134,49 @@ class Generator(nn.Module):
             for _ in range(4):
                 batch_norm_layers.append(nn.Identity())
 
-        self._init_linear = nn.Linear(z_dim, init_linear_features)
+        self._z_dim = z_dim
+        self._output_size = output_size
+        self._conv_kernel_size = conv_kernel_size
+        self._conv_kernel_filter = conv_kernel_filter
+        self._init_linear_size = init_linear_size
+        self._init_linear = nn.Linear(self._z_dim, init_linear_features)
         self._nn_batch_norm_layers = nn.ModuleList(batch_norm_layers)
         self._dropout = dropout_layer
         self._activate_fn = activate_fn
+        self._conv_layers = nn.ModuleList(
+            [nn.Conv2d(
+                in_channels=in_chan,
+                out_channels=out_chan,
+                kernel_size=k_size,
+                stride=1,
+                padding=1
+            )
+                for in_chan, out_chan, k_size
+                in zip(
+                [self._init_linear_size[0]] + self._conv_kernel_filter[0:3],
+                self._conv_kernel_filter,
+                self._conv_kernel_size
+            )]
+        )
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
         x = self._init_linear(z)
         x = self._nn_batch_norm_layers[0](x)
-
+        x = self._activate_fn(x)
+        x = x.view(-1,
+                   self._init_linear_size[0],
+                   self._init_linear_size[1],
+                   self._init_linear_size[2],
+                   )
+        for i, conv in enumerate(self._conv_layers):
+            if i < 2:
+                x = F.interpolate(
+                    x, scale_factor=2, mode='bilinear', align_corners=False
+                )
+            x = conv(x)
+            if i != len(self._nn_batch_norm_layers):
+                x = self._nn_batch_norm_layers[i + 1](x)
+            x = self._activate_fn(x)
         return x
 
 
