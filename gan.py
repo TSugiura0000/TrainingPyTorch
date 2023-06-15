@@ -292,13 +292,10 @@ def train_gan(
         elapsed_time = epoch_end - epoch_start
         formatted_time = str(timedelta(seconds=elapsed_time))
         print(f'({formatted_time}) Epoch: {epoch + 1}/{epoch_num} \t '
-              f'Discriminator Real Loss: {d_real_losses[epoch]:.4f} \t'
-              f'Discriminator Fake Loss: {d_fake_losses[epoch]:.4f} \t'
-              f'Discriminator Mean of Real and Fake Loss: '
-              f'{d_mean_losses[epoch]:.4f}\t'
+              f'Discriminator Loss: (Real: {d_real_losses[epoch]:.4f}, '
+              f'Fake: {d_fake_losses[epoch]:.4f}, '
+              f'Mean: {d_mean_losses[epoch]:.4f})\t'
               f'Generator Loss: {g_losses[epoch]:.4f}')
-        print_system_info()
-        print('---------------------------------------------------------------')
     end_time = datetime.now()
     print(end_time)
 
@@ -367,7 +364,7 @@ if __name__ == '__main__':
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
     # training gan
-    epoch_num = 1000
+    epoch_num = 100
     train_gan(
         epoch_num_=epoch_num,
         data_loader=train_dataloader,
