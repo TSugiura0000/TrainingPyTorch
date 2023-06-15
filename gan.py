@@ -1,6 +1,4 @@
 import os
-import time
-from datetime import datetime, timedelta
 
 import imageio
 import numpy as np
