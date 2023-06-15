@@ -238,7 +238,7 @@ def train_gan(
             # real data
             _, d_real_loss = discriminator_(x, real_label)
             # fake data
-            z = torch.randn(batch_size_, z_dim_)
+            z = torch.randn(batch_size_, z_dim_, device=device)
             fake_x = generator_(z)
             _, d_fake_loss = discriminator_(fake_x.detach(), fake_label)
             d_loss = d_real_loss + d_fake_loss
