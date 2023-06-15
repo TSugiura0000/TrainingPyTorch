@@ -365,7 +365,7 @@ if __name__ == '__main__':
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
     # training gan
-    epoch_num = 1000
+    epoch_num = 300
     train_gan(
         epoch_num=epoch_num,
         data_loader=train_dataloader,
