@@ -176,15 +176,24 @@ class Generator(nn.Module):
                     x, scale_factor=2, mode='bilinear', align_corners=False
                 )
             x = conv(x)
-            if i != len(self._nn_batch_norm_layers):
+            if i != len(self._nn_batch_norm_layers) - 1:
                 x = self._nn_batch_norm_layers[i + 1](x)
-            x = self._activate_fn(x)
+                x = self._activate_fn(x)
+            else:
+                x = torch.sigmoid(x)
         return x
 
 
+def train_discriminator():
+    pass
+
+
+def train_generator():
+    pass
 
 
 if __name__ == '__main__':
+    # device
     print('Device: ', device)
 
     # load dataloader
