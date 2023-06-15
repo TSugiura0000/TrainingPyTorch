@@ -2,6 +2,7 @@ import os
 import time
 from datetime import datetime, timedelta
 
+import imageio
 import numpy as np
 import psutil
 import GPUtil
@@ -25,6 +26,7 @@ device = torch.device('cuda') \
 gen_image_path = './gan_generated_images'
 if not os.path.exists(gen_image_path):
     os.makedirs(gen_image_path)
+
 
 def print_system_info():
     # CPU usage
@@ -88,6 +90,26 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
         f'./gan_comparison_images/epoch_{epoch}.pdf', bbox_inches='tight'
     )
     plt.close(fig)
+
+
+def create_gif() -> None:
+    # setting
+    dir_path = 'gan_generated_images'
+    gif_name = '.result/generated_images.gif'
+
+    # sort images
+    image_files = os.listdir(dir_path)
+    image_files.sort()
+
+    # load images
+    images = []
+    for filename in image_files:
+        if filename.endswith('.png'):
+            file_path = os.path.join(dir_path, filename)
+            images.append(imageio.imread_v2(file_path))
+
+    # create GIF
+    imageio.mimsave(gif_name, images, fps=5)
 
 
 def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
@@ -336,6 +358,8 @@ def train_gan(
             )
             torchvision.utils.save_image(
                 grid, f'./gan_generated_images/image_{epoch+1}.pdf')
+            torchvision.utils.save_image(
+                grid, f'./gan_generated_images/image_{epoch + 1}.png')
             plot_comparison(x, fake_x, epoch + 1, image_num=10)
 
         print(f'Epoch: {epoch + 1}/{epoch_num} \t '
@@ -420,3 +444,6 @@ if __name__ == '__main__':
         z_dim_=z_dim,
         batch_size_=batch_size
     )
+
+    # create GIF image
+    create_gif()
