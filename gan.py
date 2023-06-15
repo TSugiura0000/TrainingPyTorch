@@ -86,16 +86,18 @@ class Discriminator(nn.Module):
             1
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, y: torch.Tensor) \
+            -> tuple[torch.Tensor, torch.Tensor]:
         for i, conv in enumerate(self._conv_layers):
             x = self._activate_fn(conv(x))
             x = self._dropout(x)
-            if i != len(self._conv_layers):
+            if i != len(self._conv_layers) - 1:
                 x = F.max_pool2d(x, 2)
         x = x.view(-1, x.shape[1] * x.shape[2] * x.shape[3])
         x = self._last_linear(x)
-        x = F.sigmoid(x)
-        return x
+        x = torch.sigmoid(x)
+        loss = F.binary_cross_entropy(x, y)
+        return x, loss
 
 
 class Generator(nn.Module):
@@ -178,6 +180,8 @@ class Generator(nn.Module):
                 x = self._nn_batch_norm_layers[i + 1](x)
             x = self._activate_fn(x)
         return x
+
+
 
 
 if __name__ == '__main__':
