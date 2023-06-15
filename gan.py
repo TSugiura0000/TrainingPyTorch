@@ -92,8 +92,8 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
 
 def create_gif() -> None:
     # setting
-    dir_path = 'gan_generated_images'
-    gif_name = '.result/generated_images.gif'
+    dir_path = './gan_generated_images'
+    gif_name = './result/generated_images.gif'
 
     # sort images
     image_files = os.listdir(dir_path)
@@ -101,13 +101,13 @@ def create_gif() -> None:
 
     # load images
     images = []
-    for filename in image_files:
+    for filename in sorted(image_files):
         if filename.endswith('.png'):
             file_path = os.path.join(dir_path, filename)
-            images.append(imageio.imread_v2(file_path))
+            images.append(imageio.imread(file_path))
 
     # create GIF
-    imageio.mimsave(gif_name, images, fps=5)
+    imageio.mimsave(gif_name, images, duration=0.2)
 
 
 def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
@@ -379,25 +379,25 @@ if __name__ == '__main__':
 
     # setting model
     z_dim = 100
+    discriminator = Discriminator(
+        input_dim=(1, 28, 28),
+        conv_kernel_size=[5, 5, 5, 5],
+        conv_kernel_filter=[64, 64, 128, 128],
+        dropout_rate=0.4,
+        activation='relu'
+    )
     generator = Generator(
         z_dim=z_dim,
-        init_linear_size=(32, 7, 7),
-        conv_kernel_size=[5, 5, 5],
-        conv_kernel_filter=[64, 32, 1],
-        dropout_rate=0.2,
+        init_linear_size=(64, 7, 7),
+        conv_kernel_size=[5, 5, 5, 5],
+        conv_kernel_filter=[128, 64, 64, 1],
+        dropout_rate=0.0,
         batch_norm=True,
         activation='relu',
         output_size=(1, 28, 28)
     )
-    discriminator = Discriminator(
-        input_dim=(1, 28, 28),
-        conv_kernel_size=[5, 5, 5],
-        conv_kernel_filter=[32, 64, 64],
-        dropout_rate=0.2,
-        activation='relu'
-    )
-    generator.to(device=device)
     discriminator.to(device=device)
+    generator.to(device=device)
 
     # summary
     img_data = torch.randn(batch_size, 1, 28, 28, device=device)
@@ -427,8 +427,8 @@ if __name__ == '__main__':
     )
 
     # setting optimizer
-    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
-    generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
+    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0008)
+    generator_optimizer = optim.Adam(generator.parameters(), lr=0.0004)
 
     # training gan
     epoch_num = 100
