@@ -2,7 +2,8 @@ import os
 import time
 from datetime import datetime, timedelta
 
-import numpy as np
+import psutil
+import GPUtil
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,6 +17,22 @@ from torchinfo import summary
 # setting device
 device = torch.device('cuda') \
     if torch.cuda.is_available() else torch.device('cpu')
+
+
+def print_system_info():
+    # CPU usage
+    cpu_usage = psutil.cpu_percent()
+    print(f"CPU usage: {cpu_usage}%")
+
+    # Memory usage
+    memory_info = psutil.virtual_memory()
+    memory_usage = (memory_info.used / memory_info.total) * 100
+    print(f"Memory usage: {memory_usage}%")
+
+    # GPU usage
+    gpus = GPUtil.getGPUs()
+    for gpu in gpus:
+        print(f"GPU {gpu.id}: {gpu.load*100}%")
 
 
 def create_mnist_dataloader(n_batch: int = 64):
@@ -277,6 +294,8 @@ def train_gan(
               f'Discriminator Mean of Real and Fake Loss: '
               f'{d_mean_losses[epoch]:.4f}\t'
               f'Generator Loss: {g_losses[epoch]:.4f}')
+        print_system_info()
+        print('---------------------------------------------------------------')
     end_time = datetime.now()
     print(end_time)
 
