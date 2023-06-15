@@ -304,8 +304,8 @@ if __name__ == '__main__':
     discriminator.to(device=device)
 
     # summary
-    img_data = torch.randn(batch_size, 1, 28, 28)
-    labels = torch.randn(batch_size, 1)
+    img_data = torch.randn(batch_size, 1, 28, 28, device=device)
+    labels = torch.randn(batch_size, 1, device=device)
     summary(
         discriminator,
         input_data=[img_data, labels],
