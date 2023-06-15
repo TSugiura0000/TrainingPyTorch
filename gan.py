@@ -317,9 +317,9 @@ if __name__ == '__main__':
     z_dim = 100
     generator = Generator(
         z_dim=z_dim,
-        init_linear_size=(32, 7, 7),
-        conv_kernel_size=[5, 5],
-        conv_kernel_filter=[32, 1],
+        init_linear_size=(8, 7, 7),
+        conv_kernel_size=[3, 3, 3],
+        conv_kernel_filter=[16, 32, 1],
         dropout_rate=0.2,
         batch_norm=True,
         activation='relu',
@@ -327,8 +327,8 @@ if __name__ == '__main__':
     )
     discriminator = Discriminator(
         input_dim=(1, 28, 28),
-        conv_kernel_size=[5, 5],
-        conv_kernel_filter=[16, 32],
+        conv_kernel_size=[3, 3, 3],
+        conv_kernel_filter=[16, 32, 16],
         dropout_rate=0.2,
         activation='relu'
     )
