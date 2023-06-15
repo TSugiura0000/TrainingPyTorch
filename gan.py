@@ -20,22 +20,20 @@ device = torch.device('cuda') \
 def create_mnist_dataloader(n_batch: int = 256):
     # setting
     data_path = './datasets/MNIST_data'
+    if not os.path.exists(data_path):
+        os.makedirs(data_path)
 
     # load dataset
     transform = transforms.Compose(
         [transforms.ToTensor()]
     )
     train_set = datasets.MNIST(
-        data_path, download=True, train=True, transform=transform
-    )
-    test_set = datasets.MNIST(
-        data_path, download=True, train=False, transform=transform
+        data_path, download=True, transform=transform
     )
 
     # create dataloader
     train_loader = DataLoader(train_set, batch_size=n_batch, shuffle=True)
-    test_loader = DataLoader(test_set, batch_size=n_batch, shuffle=True)
-    return train_loader, test_loader
+    return train_loader
 
 
 class Discriminator(nn.Module):
@@ -198,5 +196,32 @@ if __name__ == '__main__':
 
     # load dataloader
     print('Loading DataLoader . . .')
-    train_dataloader, test_dataloader = create_mnist_dataloader(n_batch=128)
+    train_dataloader = create_mnist_dataloader(n_batch=128)
     print('Completed Loading DataLoader\n')
+
+    # setting model
+    generator = Generator(
+        z_dim=100,
+        init_linear_size=(64, 7, 7),
+        conv_kernel_size=[3, 3, 3, 3],
+        conv_kernel_filter=[128, 64, 64, 1],
+        dropout_rate=0.2,
+        batch_norm=True,
+        activation='relu',
+        output_size=(1, 28, 28)
+    )
+    discriminator = Discriminator(
+        input_dim=(1, 28, 28),
+        conv_kernel_size=[3, 3, 3, 3],
+        conv_kernel_filter=[64, 64, 128, 128],
+        dropout_rate=0.2,
+        activation='relu'
+    )
+    generator.to(device=device)
+    discriminator.to(device=device)
+
+    # setting optimizer
+    generator_optimizer = optim.Adam(generator.parameters(), lr=0.0002)
+    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
+
+
