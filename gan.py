@@ -7,6 +7,7 @@ import GPUtil
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import tqdm as tqdm
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from torch import optim
@@ -244,7 +245,7 @@ def train_gan(
     g_losses = []
     start_time = datetime.now()
     print(start_time)
-    for epoch in range(epoch_num):
+    for epoch in tqdm(range(epoch_num)):
         epoch_start = time.time()
         for x, _ in data_loader:
             x = x.to(device=device)
@@ -283,7 +284,7 @@ def train_gan(
             # --- train generator --- #
 
             # save figure
-            plot_comparison(x, fake_x, epoch, image_num=10)
+            plot_comparison(x, fake_x, epoch + 1, image_num=10)
 
         epoch_end = time.time()
         elapsed_time = epoch_end - epoch_start
