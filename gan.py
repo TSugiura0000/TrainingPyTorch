@@ -287,7 +287,7 @@ def train_gan(
     d_fake_losses = []
     d_mean_losses = []
     g_losses = []
-    fixed_z = torch.randn(batch_size_, z_dim_)
+    fixed_z = torch.randn(batch_size_, z_dim_, device=device)
     for epoch in tqdm(range(epoch_num_)):
         for x, _ in data_loader:
             x = x.to(device=device)
