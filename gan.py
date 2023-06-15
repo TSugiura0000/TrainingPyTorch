@@ -309,6 +309,7 @@ def train_gan(
     g_losses = []
     fixed_z = torch.randn(batch_size_, z_dim_, device=device)
     for epoch in tqdm(range(epoch_num_)):
+        #epochのlossの平均を算出する
         for x, _ in data_loader:
             x = x.to(device=device)
             batch_size_ = x.size(0)
@@ -365,6 +366,8 @@ def train_gan(
               f'Fake: {d_fake_losses[epoch]:.4f}, '
               f'Mean: {d_mean_losses[epoch]:.4f})\t'
               f'Generator Loss: {g_losses[epoch]:.4f}')
+
+    # epochの損失の平均をそれぞれプロットする．
 
 
 if __name__ == '__main__':
