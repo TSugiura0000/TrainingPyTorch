@@ -226,6 +226,7 @@ def train_gan(
     g_losses = []
     for epoch in range(epoch_num):
         for x, _ in data_loader:
+            x = x.to(device=device)
             batch_size_ = x.size(0)
 
             # create labels
