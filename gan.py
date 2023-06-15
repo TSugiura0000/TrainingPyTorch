@@ -95,15 +95,16 @@ class Discriminator(nn.Module):
     ) -> None:
         """Discriminator
         The number of elements in the list
-        (conv_kernel_size, conv_kernel_filter) must be 4.
+        (conv_kernel_size, conv_kernel_filter) must be same.
         """
         super().__init__()
         dropout_layer = nn.Dropout2d(p=dropout_rate)
         activate_fn = nn.ReLU()
+        num_pooling = len(conv_kernel_filter) - 1
         if conv_kernel_size is None:
-            conv_kernel_size = [3, 3, 3, 3]
+            conv_kernel_size = [3, 3, 3]
         if conv_kernel_filter is None:
-            conv_kernel_filter = [64, 64, 128, 128]
+            conv_kernel_filter = [64, 64, 128]
         if activation == 'leaky_relu':
             activate_fn = nn.LeakyReLU(inplace=True)
 
@@ -118,17 +119,18 @@ class Discriminator(nn.Module):
                 out_channels=out_chan,
                 kernel_size=k_size,
                 stride=1,
-                padding=1
+                padding=k_size // 2
             )
                 for in_chan, out_chan, k_size
                 in zip(
-                [self._input_dim[0]] + self._conv_kernel_filter[0:3],
+                [self._input_dim[0]] + self._conv_kernel_filter[0:-1],
                 self._conv_kernel_filter,
                 self._conv_kernel_size
             )]
         )
         self._last_linear = nn.Linear(
-            ((self._input_dim[1] // 8) ** 2) * conv_kernel_filter[-1],
+            ((self._input_dim[1] // (2 ** num_pooling)) ** 2)
+            * conv_kernel_filter[-1],
             1
         )
 
@@ -160,7 +162,7 @@ class Generator(nn.Module):
     ) -> None:
         """Discriminator
         The number of elements in the list
-        (conv_kernel_size, conv_kernel_filter) must be 4.
+        (conv_kernel_size, conv_kernel_filter) must be same.
         """
         super().__init__()
         batch_norm_layers = []
@@ -169,9 +171,9 @@ class Generator(nn.Module):
         init_linear_features = \
             init_linear_size[0] * init_linear_size[1] * init_linear_size[2]
         if conv_kernel_size is None:
-            conv_kernel_size = [3, 3, 3, 3]
+            conv_kernel_size = [3, 3, 3]
         if conv_kernel_filter is None:
-            conv_kernel_filter = [128, 64, 64, 1]
+            conv_kernel_filter = [128, 64, 1]
         if activation == 'leaky_relu':
             activate_fn = nn.LeakyReLU(inplace=True)
         if batch_norm:
@@ -197,11 +199,11 @@ class Generator(nn.Module):
                 out_channels=out_chan,
                 kernel_size=k_size,
                 stride=1,
-                padding=1
+                padding=k_size // 2
             )
                 for in_chan, out_chan, k_size
                 in zip(
-                [self._init_linear_size[0]] + self._conv_kernel_filter[0:3],
+                [self._init_linear_size[0]] + self._conv_kernel_filter[0:-1],
                 self._conv_kernel_filter,
                 self._conv_kernel_size
             )]
@@ -231,7 +233,7 @@ class Generator(nn.Module):
 
 
 def train_gan(
-        epoch_num: int,
+        epoch_num_: int,
         data_loader: DataLoader,
         discriminator_: nn.Module,
         generator_: nn.Module,
@@ -245,7 +247,7 @@ def train_gan(
     g_losses = []
     start_time = datetime.now()
     print(start_time)
-    for epoch in tqdm(range(epoch_num)):
+    for epoch in tqdm(range(epoch_num_)):
         epoch_start = time.time()
         for x, _ in data_loader:
             x = x.to(device=device)
@@ -315,9 +317,9 @@ if __name__ == '__main__':
     z_dim = 100
     generator = Generator(
         z_dim=z_dim,
-        init_linear_size=(64, 7, 7),
-        conv_kernel_size=[3, 3, 3, 3],
-        conv_kernel_filter=[128, 64, 64, 1],
+        init_linear_size=(32, 7, 7),
+        conv_kernel_size=[5, 5],
+        conv_kernel_filter=[32, 1],
         dropout_rate=0.2,
         batch_norm=True,
         activation='relu',
@@ -325,8 +327,8 @@ if __name__ == '__main__':
     )
     discriminator = Discriminator(
         input_dim=(1, 28, 28),
-        conv_kernel_size=[3, 3, 3, 3],
-        conv_kernel_filter=[64, 64, 128, 128],
+        conv_kernel_size=[5, 5],
+        conv_kernel_filter=[16, 32],
         dropout_rate=0.2,
         activation='relu'
     )
@@ -365,9 +367,9 @@ if __name__ == '__main__':
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
     # training gan
-    epoch_num = 300
+    epoch_num = 1000
     train_gan(
-        epoch_num=epoch_num,
+        epoch_num_=epoch_num,
         data_loader=train_dataloader,
         discriminator_=discriminator,
         generator_=generator,
