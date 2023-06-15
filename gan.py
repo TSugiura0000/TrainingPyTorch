@@ -307,7 +307,7 @@ if __name__ == '__main__':
 
     # load dataloader
     print('Loading DataLoader . . .')
-    batch_size = 64
+    batch_size = 256
     train_dataloader = create_mnist_dataloader(n_batch=batch_size)
     print('Completed Loading DataLoader\n')
 
