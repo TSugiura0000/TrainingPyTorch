@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
 from torch import optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -33,6 +34,35 @@ def create_mnist_dataloader(n_batch: int = 64):
     # create dataloader
     train_loader = DataLoader(train_set, batch_size=n_batch, shuffle=True)
     return train_loader
+
+
+def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
+                    epoch: int, image_num: int = 10) -> None:
+    dir_path = './gan_comparison_images/'
+
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    real_image = real_image.cpu().numpy()
+    fake_image = fake_image.cpu().detach().numpy()
+
+    fig = plt.figure(figsize=(20, 4))
+    gs = gridspec.GridSpec(2, image_num)
+    gs.update(wspace=0.05, hspace=0.05)
+
+    for i in range(image_num):
+        ax = plt.subplot(gs[0, i])
+        plt.imshow(real_image[i].reshape(28, 28), cmap='gray')
+        ax.axis('off')
+
+        ax = plt.subplot(gs[1, i])
+        plt.imshow(fake_image[i].reshape(28, 28), cmap='gray')
+        ax.axis('off')
+
+    plt.savefig(
+        f'./gan_comparison_images/epoch_{epoch}.pdf', bbox_inches='tight'
+    )
+    plt.close(fig)
 
 
 class Discriminator(nn.Module):
@@ -199,8 +229,8 @@ def train_gan(
             batch_size_ = x.size(0)
 
             # create labels
-            real_label = torch.ones(batch_size_, device=device)
-            fake_label = torch.zeros(batch_size_, device=device)
+            real_label = torch.ones((batch_size_, 1), device=device)
+            fake_label = torch.zeros((batch_size_, 1), device=device)
 
             # --- train discriminator --- #
             d_optimizer_.zero_grad()
@@ -208,8 +238,8 @@ def train_gan(
             _, d_real_loss = discriminator_(x, real_label)
             # fake data
             z = torch.randn(batch_size_, z_dim_)
-            fake_x = generator_(z.detach())
-            _, d_fake_loss = discriminator_(fake_x, fake_label)
+            fake_x = generator_(z)
+            _, d_fake_loss = discriminator_(fake_x.detach(), fake_label)
             d_loss = d_real_loss + d_fake_loss
 
             d_real_losses.append(d_real_loss)
@@ -229,6 +259,9 @@ def train_gan(
             g_loss.backward()
             g_optimizer_.step()
             # --- train generator --- #
+
+            # save figure
+            plot_comparison(x, fake_x, epoch, image_num=10)
 
         print(f'Epoch: {epoch + 1}/{epoch_num} \t '
               f'Discriminator Real Loss: {d_real_losses[epoch]:.4f} \t'
@@ -301,4 +334,14 @@ if __name__ == '__main__':
     discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002)
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
-    train_gan()
+    # training gan
+    epoch_num = 1000
+    train_gan(
+        epoch_num=epoch_num,
+        data_loader=train_dataloader,
+        discriminator_=discriminator,
+        generator_=generator,
+        d_optimizer_=discriminator_optimizer,
+        g_optimizer_=generator_optimizer,
+        z_dim_=z_dim
+    )

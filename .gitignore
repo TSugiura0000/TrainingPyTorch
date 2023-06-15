@@ -3,3 +3,4 @@
 /comparison_images
 .venv/
 .python-version
+gan_comparison_images/
