@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 
 import numpy as np
 import torch
@@ -224,7 +225,10 @@ def train_gan(
     d_fake_losses = []
     d_mean_losses = []
     g_losses = []
+    start_time = datetime.now()
+    print(start_time)
     for epoch in range(epoch_num):
+        epoch_start = time.time()
         for x, _ in data_loader:
             x = x.to(device=device)
             batch_size_ = x.size(0)
@@ -264,12 +268,17 @@ def train_gan(
             # save figure
             plot_comparison(x, fake_x, epoch, image_num=10)
 
-        print(f'Epoch: {epoch + 1}/{epoch_num} \t '
+        epoch_end = time.time()
+        elapsed_time = epoch_end - epoch_start
+        formatted_time = str(timedelta(seconds=elapsed_time))
+        print(f'({formatted_time}) Epoch: {epoch + 1}/{epoch_num} \t '
               f'Discriminator Real Loss: {d_real_losses[epoch]:.4f} \t'
               f'Discriminator Fake Loss: {d_fake_losses[epoch]:.4f} \t'
               f'Discriminator Mean of Real and Fake Loss: '
               f'{d_mean_losses[epoch]:.4f}\t'
               f'Generator Loss: {g_losses[epoch]:.4f}')
+    end_time = datetime.now()
+    print(end_time)
 
 
 if __name__ == '__main__':
