@@ -325,14 +325,14 @@ def train_gan(
             d_optimizer_.zero_grad()
             # real data
             _, d_real_loss = discriminator_(x, real_label)
-            d_real_l += d_real_loss
+            d_real_l += d_real_loss.item()
             # fake data
             z = torch.randn(batch_size_, z_dim_, device=device)
             fake_x = generator_(z)
             _, d_fake_loss = discriminator_(fake_x.detach(), fake_label)
-            d_fake_l += d_fake_loss
+            d_fake_l += d_fake_loss.item()
             d_loss = d_real_loss + d_fake_loss
-            d_mean_l += d_loss / 2
+            d_mean_l += d_loss.item() / 2
 
             d_loss.backward()
             d_optimizer_.step()
@@ -341,7 +341,7 @@ def train_gan(
             # --- train generator --- #
             g_optimizer_.zero_grad()
             _, g_loss = discriminator_(fake_x, real_label)
-            g_l += g_loss
+            g_l += g_loss.item()
 
             g_loss.backward()
             g_optimizer_.step()
