@@ -85,7 +85,7 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
         ax.axis('off')
 
     plt.savefig(
-        f'./gan_comparison_images/epoch_{epoch}.pdf', bbox_inches='tight'
+        f'./result/gan_comparison_images/epoch_{epoch}.pdf', bbox_inches='tight'
     )
     plt.close(fig)
 
@@ -357,9 +357,9 @@ def train_gan(
                 fake_images[:64], padding=2, normalize=True
             )
             torchvision.utils.save_image(
-                grid, f'result/gan_generated_images/image_{epoch + 1}.pdf')
+                grid, f'result/gan_generated_images/epoch_{epoch + 1}.pdf')
             torchvision.utils.save_image(
-                grid, f'result/gan_generated_images/image_{epoch + 1}.png')
+                grid, f'result/gan_generated_images/epoch_{epoch + 1}.png')
             plot_comparison(x, fake_x, epoch + 1, image_num=10)
 
         d_real_losses.append(d_real_l / len(data_loader))
