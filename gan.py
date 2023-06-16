@@ -1,6 +1,6 @@
 import os
 
-import imageio.v3 as imageio
+import imageio.v2 as imageio
 import numpy as np
 import psutil
 import GPUtil
@@ -105,15 +105,14 @@ def create_gif(gif_name_: str = None, fps: float = 5.0) -> None:
 
     # load images
     images = []
-    for filename in tqdm(sorted(image_files)):
+    for i, filename in tqdm(enumerate(sorted(image_files))):
         if filename.endswith('.png'):
             file_path = os.path.join(dir_path, filename)
             images.append(imageio.imread(file_path))
 
     # create GIF
     dur = 1 / fps
-    imageio.imwrite(os.path.join(root_dir, gif_name_), images, duration=dur,
-                    loop=1)
+    imageio.mimsave(os.path.join(root_dir, gif_name_), images, duration=dur)
 
 
 def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
