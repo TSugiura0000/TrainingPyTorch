@@ -5,3 +5,4 @@
 .python-version
 gan_comparison_images/
 gan_generated_images/
+__pycache__/

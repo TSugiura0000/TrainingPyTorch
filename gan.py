@@ -116,18 +116,18 @@ def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
     d_mean_loss = np.array(d_mean)
     g_loss = np.array(g)
 
-    figure = plt.figure(fisize=(8, 7))
+    figure = plt.figure(figsize=(8, 7))
     axis = figure.add_subplot(111)
     axis.plot(
         np.arange(1, len(d_real_loss) + 1), d_real_loss,
         label='Discriminator Loss (Real data)'
     )
     axis.plot(
-        np.arrange(1, len(d_fake_loss) + 1), d_fake_loss,
+        np.arange(1, len(d_fake_loss) + 1), d_fake_loss,
         label='Discriminator Loss (Fake data)'
     )
     axis.plot(
-        np.arrange(1, len(d_mean_loss) + 1), d_mean_loss,
+        np.arange(1, len(d_mean_loss) + 1), d_mean_loss,
         label='Discriminator Loss (Mean)'
     )
     axis.plot(
@@ -142,7 +142,7 @@ def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
     save_path_as_png = './result/mnist_gan.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
 
 class Discriminator(nn.Module):
@@ -309,7 +309,10 @@ def train_gan(
     g_losses = []
     fixed_z = torch.randn(batch_size_, z_dim_, device=device)
     for epoch in tqdm(range(epoch_num_)):
-        #epochのlossの平均を算出する
+        d_real_l = 0
+        d_fake_l = 0
+        d_mean_l = 0
+        g_l = 0
         for x, _ in data_loader:
             x = x.to(device=device)
             batch_size_ = x.size(0)
@@ -322,15 +325,14 @@ def train_gan(
             d_optimizer_.zero_grad()
             # real data
             _, d_real_loss = discriminator_(x, real_label)
+            d_real_l += d_real_loss
             # fake data
             z = torch.randn(batch_size_, z_dim_, device=device)
             fake_x = generator_(z)
             _, d_fake_loss = discriminator_(fake_x.detach(), fake_label)
+            d_fake_l += d_fake_loss
             d_loss = d_real_loss + d_fake_loss
-
-            d_real_losses.append(d_real_loss)
-            d_fake_losses.append(d_fake_loss)
-            d_mean_losses.append(d_loss / 2)
+            d_mean_l += d_loss / 2
 
             d_loss.backward()
             d_optimizer_.step()
@@ -339,8 +341,7 @@ def train_gan(
             # --- train generator --- #
             g_optimizer_.zero_grad()
             _, g_loss = discriminator_(fake_x, real_label)
-
-            g_losses.append(g_loss)
+            g_l += g_loss
 
             g_loss.backward()
             g_optimizer_.step()
@@ -361,13 +362,18 @@ def train_gan(
                 grid, f'./gan_generated_images/image_{epoch + 1}.png')
             plot_comparison(x, fake_x, epoch + 1, image_num=10)
 
+        d_real_losses.append(d_real_l / len(data_loader))
+        d_fake_losses.append(d_fake_l / len(data_loader))
+        d_mean_losses.append(d_mean_l / len(data_loader))
+        g_losses.append(g_l / len(data_loader))
+
         print(f'Epoch: {epoch + 1}/{epoch_num} \t '
               f'Discriminator Loss: (Real: {d_real_losses[epoch]:.4f}, '
               f'Fake: {d_fake_losses[epoch]:.4f}, '
               f'Mean: {d_mean_losses[epoch]:.4f})\t'
               f'Generator Loss: {g_losses[epoch]:.4f}')
 
-    # epochの損失の平均をそれぞれプロットする．
+    plot_loss(d_real_losses, d_fake_losses, d_mean_losses, g_losses)
 
 
 if __name__ == '__main__':
@@ -434,7 +440,7 @@ if __name__ == '__main__':
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0004)
 
     # training gan
-    epoch_num = 100
+    epoch_num = 1
     train_gan(
         epoch_num_=epoch_num,
         data_loader=train_dataloader,
