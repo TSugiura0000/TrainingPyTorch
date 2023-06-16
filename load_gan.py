@@ -25,7 +25,8 @@ def create_morphing_image(generator: nn.Module, z_: torch.Tensor,
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-    z_.to(device=device)
+    z_ = z_.to(device=device)
+    generator.to(device=device)
     generator.eval()
     with torch.no_grad():
         image = generator(z_)
@@ -78,8 +79,8 @@ if __name__ == '__main__':
     # morphing
     z_dim = 100
     n_batch = 256
-    z1 = torch.randn(1, z_dim)
-    z2 = torch.randn(1, z_dim)
+    z1 = torch.randn(n_batch, z_dim)
+    z2 = torch.randn(n_batch, z_dim)
     line_space = torch.linspace(0, 1, steps=n_batch).unsqueeze(1)
     z = line_space * z1 + (1 - line_space) * z2
 
@@ -87,5 +88,5 @@ if __name__ == '__main__':
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     create_morphing_image(g, z, save_path, show=False,
-                          gif_name='morphing.gif', fps=25)
+                          gif_name='morphing_fps5.gif', fps=5)
 

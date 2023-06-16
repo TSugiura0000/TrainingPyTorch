@@ -1,6 +1,6 @@
 import os
 
-import imageio.v2 as imageio
+import imageio.v3 as imageio
 import numpy as np
 import psutil
 import GPUtil
@@ -90,14 +90,14 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
     plt.close(fig)
 
 
-def create_gif(gif_name: str = None, fps: int = 5) -> None:
+def create_gif(gif_name_: str = None, fps: float = 5.0) -> None:
     # setting
     root_dir = './result/GIF'
     dir_path = './result/GIF/for_gif'
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
-    if gif_name is None:
-        gif_name = os.path.join(dir_path, 'GIF.gif')
+    if gif_name_ is None:
+        gif_name_ = os.path.join(dir_path, 'GIF.gif')
 
     # sort images
     image_files = os.listdir(dir_path)
@@ -112,7 +112,8 @@ def create_gif(gif_name: str = None, fps: int = 5) -> None:
 
     # create GIF
     dur = 1 / fps
-    imageio.mimsave(os.path.join(root_dir, gif_name), images, duration=dur)
+    imageio.imwrite(os.path.join(root_dir, gif_name_), images, duration=dur,
+                    loop=1)
 
 
 def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
@@ -467,4 +468,5 @@ if __name__ == '__main__':
                os.path.join(model_dir, 'generator.pth'))
 
     # create GIF image
-    create_gif()
+    gif_name = 'generated_images.gif'
+    create_gif(gif_name_=gif_name, fps=5)

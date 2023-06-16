@@ -6,3 +6,4 @@
 result/gan_comparison_images/
 result/gan_generated_images/
 __pycache__/
+/result/GIF/for_gif
