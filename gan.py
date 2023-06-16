@@ -452,5 +452,14 @@ if __name__ == '__main__':
         batch_size_=batch_size
     )
 
+    # save models' parameters
+    model_dir = './model'
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    torch.save(discriminator.state_dict(),
+               os.path.join(model_dir, 'discriminator.pth'))
+    torch.save(generator.state_dict(),
+               os.path.join(model_dir, 'generator.pth'))
+
     # create GIF image
     create_gif()
