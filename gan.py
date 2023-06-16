@@ -21,7 +21,7 @@ device = torch.device('cuda') \
     if torch.cuda.is_available() else torch.device('cpu')
 
 # create directory for generated images
-gen_image_path = './gan_generated_images'
+gen_image_path = 'result/gan_generated_images'
 if not os.path.exists(gen_image_path):
     os.makedirs(gen_image_path)
 
@@ -63,7 +63,7 @@ def create_mnist_dataloader(n_batch: int = 64):
 
 def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
                     epoch: int, image_num: int = 10) -> None:
-    dir_path = './gan_comparison_images/'
+    dir_path = 'result/gan_comparison_images/'
 
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -92,8 +92,8 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
 
 def create_gif() -> None:
     # setting
-    dir_path = './gan_generated_images'
-    gif_name = './result/generated_images.gif'
+    dir_path = './result/gan_generated_images'
+    gif_name = './result/generated_images/GIF.gif'
 
     # sort images
     image_files = os.listdir(dir_path)
@@ -138,8 +138,8 @@ def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
     axis.set_ylabel('Loss')
     axis.legend()
 
-    save_path_as_pdf = './result/mnist_gan.pdf'
-    save_path_as_png = './result/mnist_gan.png'
+    save_path_as_pdf = 'result/loss/mnist_gan.pdf'
+    save_path_as_png = 'result/loss/mnist_gan.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     # plt.show()
@@ -357,9 +357,9 @@ def train_gan(
                 fake_images[:64], padding=2, normalize=True
             )
             torchvision.utils.save_image(
-                grid, f'./gan_generated_images/image_{epoch+1}.pdf')
+                grid, f'result/gan_generated_images/image_{epoch + 1}.pdf')
             torchvision.utils.save_image(
-                grid, f'./gan_generated_images/image_{epoch + 1}.png')
+                grid, f'result/gan_generated_images/image_{epoch + 1}.png')
             plot_comparison(x, fake_x, epoch + 1, image_num=10)
 
         d_real_losses.append(d_real_l / len(data_loader))

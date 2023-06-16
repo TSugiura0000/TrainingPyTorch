@@ -165,8 +165,8 @@ if __name__ == '__main__':
 
     figure.suptitle('MNIST Dataset Classifier (Neural Network)')
 
-    save_path_as_pdf = f'./result/mnist_nn_adam.pdf'
-    save_path_as_png = './result/mnist_nn_adam.png'
+    save_path_as_pdf = f'result/loss/mnist_nn_adam.pdf'
+    save_path_as_png = 'result/loss/mnist_nn_adam.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
 

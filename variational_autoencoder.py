@@ -40,7 +40,7 @@ def create_mnist_dataloader(n_batch: int = 256):
 
 def plot_comparison(x: torch.Tensor, re_x: torch.Tensor,
                     epoch_num: int, n: int = 10) -> None:
-    dir_path = './comparison_images/'
+    dir_path = 'result/comparison_images/'
 
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -618,8 +618,8 @@ if __name__ == '__main__':
     axis.set_ylabel('Loss')
     axis.legend()
 
-    save_path_as_pdf = './result/mnist_autoencoder.pdf'
-    save_path_as_png = './result/mnist_autoencoder.png'
+    save_path_as_pdf = 'result/loss/mnist_autoencoder.pdf'
+    save_path_as_png = 'result/loss/mnist_autoencoder.png'
     plt.savefig(save_path_as_pdf, format='pdf', bbox_inches='tight')
     plt.savefig(save_path_as_png, format='PNG', bbox_inches='tight')
     plt.show()

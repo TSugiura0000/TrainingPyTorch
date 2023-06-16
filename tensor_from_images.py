@@ -4,7 +4,7 @@ import imageio.v2 as imageio
 import torch
 
 if __name__ == '__main__':
-    image_dir = './image_data'
+    image_dir = 'sample_images'
     image_names = [image_name for image_name in os.listdir(image_dir)
                    if os.path.splitext(image_name)[-1] == '.bmp']
     batch_size = len(image_names)
