@@ -90,10 +90,14 @@ def plot_comparison(real_image: torch.Tensor, fake_image: torch.Tensor,
     plt.close(fig)
 
 
-def create_gif() -> None:
+def create_gif(gif_name: str = None, fps: int = 5) -> None:
     # setting
-    dir_path = './result/gan_generated_images'
-    gif_name = './result/generated_images/GIF.gif'
+    root_dir = './result/GIF'
+    dir_path = './result/GIF/for_gif'
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    if gif_name is None:
+        gif_name = os.path.join(dir_path, 'GIF.gif')
 
     # sort images
     image_files = os.listdir(dir_path)
@@ -101,13 +105,14 @@ def create_gif() -> None:
 
     # load images
     images = []
-    for filename in sorted(image_files):
+    for filename in tqdm(sorted(image_files)):
         if filename.endswith('.png'):
             file_path = os.path.join(dir_path, filename)
             images.append(imageio.imread(file_path))
 
     # create GIF
-    imageio.mimsave(gif_name, images, duration=0.2)
+    dur = 1 / fps
+    imageio.mimsave(os.path.join(root_dir, gif_name), images, duration=dur)
 
 
 def plot_loss(d_real: list, d_fake: list, d_mean: list, g: list) -> None:
